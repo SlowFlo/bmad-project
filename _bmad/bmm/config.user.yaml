@@ -1,0 +1,8 @@
+# Surcharges utilisateur de la configuration BMM
+# Ce fichier prime sur config.yaml et n'est pas écrasé par l'installateur.
+
+# Langue des échanges avec les agents BMad
+communication_language: Français
+
+# Langue de rédaction des documents produits (PRD, architecture, épiques, stories…)
+document_output_language: Français
