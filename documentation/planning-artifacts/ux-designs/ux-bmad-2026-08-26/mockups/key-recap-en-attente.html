@@ -1,0 +1,305 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ex Aequo — Jouabilité et récapitulatif</title>
+<style>
+/* ============================================================
+   ÉCRAN 4 — JOUABILITÉ, RÉCAPITULATIF, MUTATIONS DE FR-16      v3.3 · 2026-08-27
+   Le climax du parcours 1, et la seule surface où le produit écrit les
+   conséquences qu'il s'inflige : le jour bloqué et le jour gagné.
+
+   v3.2 — LE FIL VISIBLE N EST PLUS UNE REGION LIVE. Il ne porte plus role="log" :
+   trois satellites masques (log pour le tour complet, status pour l etape, status
+   pour toute mutation d un bloc persistant) portent les annonces.
+   Ce qui s affiche et ce qui se prononce suivent desormais deux chemins.
+
+   v3.3 — LA MINUTERIE EST COUPEE. Une annonce est ecrite des qu elle est produite ;
+   aucun etat ne peut etre retenu. Le decouplage reste, pour la vraie raison : un fil
+   live est irreparable pour les mutations de composant.
+
+   Sections de spine qui gouvernent cet écran :
+     DESIGN.md     → Colors (l'ambre a UN seul métier) · Components
+                     (playability-callout, meeting-recap, status-badge-*,
+                     unknown-value) · Do's and Don'ts
+     EXPERIENCE.md → Component Patterns (encadré de jouabilité, récapitulatif,
+                     pastille de statut) · State Patterns (jouabilité dangereuse,
+                     rencontre en attente / confirmée, jour bloqué, jour gagné) ·
+                     La grammaire de l'honnêteté · Key Flows, parcours 1
+                     étapes 8, 11, 12 et parcours 4 étape 6
+
+   NOUVEAU EN v3 : la ligne du jour bloqué (FR-16) et la phrase du jour gagné.
+   Corrigés depuis la v1 : border-decorative, outline:none, <input>, aria-label
+   sur <div> nu, et le lieu nantais remplacé par un lieu lyonnais — le produit
+   ne dessert que Lyon.
+   LES SEUILS MÉTÉO CHIFFRÉS ICI SONT ILLUSTRATIFS. Seul FR-10 fait autorité.
+   LA SPINE L'EMPORTE SUR CETTE MAQUETTE EN CAS DE CONFLIT.
+   ============================================================ */
+:root{
+  --surface-base:#0B1220; --surface-raised:#111C2E; --surface-raised-hover:#1E314E;
+  --surface-overlay:#18263C; --surface-user:#1B2C46;
+  --ink-primary:#E8EDF5; --ink-secondary:#94A3B8; --ink-disabled:#55677F;
+  --ink-on-accent:#04241C; --accent:#2DD4A7; --accent-quiet:#123A32;
+  --status-pending:#E8A33D; --status-pending-quiet:#3A2C13;
+  --status-danger:#F0637A; --status-danger-quiet:#3B1620;
+  --border-interactive:#6B82A6; --border-strong:#8AA0C4; --focus-ring:#7DD3FC;
+  --r-sm:8px; --r-md:12px; --r-lg:18px; --r-full:9999px;
+  --thread:45rem; --target:48px; --gutter:32px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#060A12;color:var(--ink-primary);
+  font-family:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;
+  padding:2.5rem 1rem;display:flex;flex-direction:column;align-items:center;gap:1.5rem}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;
+  clip:rect(0 0 0 0);white-space:nowrap;border:0}
+.caption{color:var(--ink-secondary);font-size:.875rem;line-height:1.45;max-width:52rem;text-align:center}
+.caption b{color:var(--ink-primary);font-weight:600}
+.tag{font-size:.8125rem;font-weight:500;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--ink-secondary);margin-top:1rem}
+
+.frame{width:100%;max-width:74rem;background:var(--surface-base);
+  border:1px solid var(--border-interactive);border-radius:12px;overflow:hidden;
+  display:flex;flex-direction:column}
+.bar{flex:none;display:flex;align-items:center;gap:.5rem;padding:.5rem .875rem;
+  border-bottom:1px solid var(--border-interactive);background:#080E1A}
+.bar i{width:10px;height:10px;border-radius:50%;background:var(--border-interactive);display:block}
+.url{margin-left:.75rem;flex:1;max-width:21rem;border:1px solid var(--border-interactive);
+  border-radius:var(--r-full);padding:.25rem .875rem;font-size:.75rem;color:var(--ink-secondary)}
+
+main{flex:1;display:flex;justify-content:center;padding:2rem var(--gutter)}
+.column{width:100%;max-width:var(--thread)}
+.turn{margin-bottom:2rem}
+.turn:last-child{margin-bottom:0}
+.msg-bot{font-size:1.0625rem;line-height:1.6;margin-bottom:1.5rem}
+
+/* --- components.playability-callout --- */
+.playability{background:var(--status-danger-quiet);border-left:3px solid var(--status-danger);
+  border-radius:var(--r-sm);padding:16px;color:var(--ink-primary);margin-bottom:1.5rem}
+.playability .head{font-size:.8125rem;font-weight:500;letter-spacing:.02em;
+  text-transform:uppercase;margin-bottom:8px}
+.playability p{font-size:1.0625rem;line-height:1.6}
+.playability .alt{font-size:.875rem;line-height:1.45;color:var(--ink-secondary);margin-top:8px}
+/* --- la contre-proposition est un button-quiet reel, pas une ligne de prose --- */
+.playability .alt-btn{margin-top:12px;background:transparent;
+  border:1px solid var(--border-interactive);color:var(--ink-primary);
+  border-radius:var(--r-sm);padding:.75rem 1.25rem;min-height:var(--target);
+  font:inherit;font-size:.9375rem;font-weight:500;cursor:pointer}
+.playability .alt-btn:hover{background:var(--surface-raised-hover);border-color:var(--border-strong)}
+.playability .alt-btn:focus-visible{outline:3px solid var(--focus-ring);outline-offset:2px}
+/* --- components.button-primary : l unique instance du fil --- */
+.commit{margin-top:1rem;background:var(--accent);border:1px solid transparent;
+  color:var(--ink-on-accent);border-radius:var(--r-sm);padding:.75rem 1.5rem;
+  min-height:var(--target);font:inherit;font-size:.9375rem;font-weight:600;cursor:pointer}
+.commit:hover{background:#4EE0BA;border-color:var(--ink-on-accent)}
+.commit:active{background:#22B48D;border-color:var(--ink-on-accent)}
+.commit:focus-visible{outline:3px solid var(--focus-ring);outline-offset:2px}
+
+/* --- components.meeting-recap --- */
+.recap{background:var(--surface-raised);border:1px solid var(--border-interactive);
+  border-radius:var(--r-md);padding:16px;display:grid;gap:8px}
+.recap .top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.recap .name{font-size:1.0625rem;font-weight:600;line-height:1.3}
+.recap .meta{font-size:.875rem;line-height:1.45;color:var(--ink-secondary)}
+.unknown{font-style:italic}
+.badge{flex:none;border-radius:var(--r-full);padding:4px 12px;font-size:.8125rem;
+  font-weight:500;letter-spacing:.02em;white-space:nowrap}
+.badge.pending{background:var(--status-pending-quiet);color:var(--status-pending)}
+.badge.confirmed{background:var(--accent-quiet);color:var(--accent)}
+/* La ligne du jour bloqué informe, elle n'alerte pas : PAS de teinte de statut. */
+.blocked{font-size:.875rem;line-height:1.45;color:var(--ink-secondary);
+  padding-top:8px;border-top:1px solid var(--border-interactive)}
+
+.composer-wrap{flex:none;padding:0 var(--gutter) 1.75rem;display:flex;justify-content:center}
+form{width:100%;max-width:var(--thread);background:var(--surface-overlay);
+  border:1px solid var(--border-interactive);border-radius:var(--r-lg);min-height:var(--target);
+  display:flex;align-items:flex-end;gap:.75rem;padding:.375rem .375rem .375rem 1rem}
+textarea{flex:1;background:transparent;border:0;color:var(--ink-primary);resize:none;
+  font-family:inherit;font-size:1.0625rem;line-height:1.6;padding:.6875rem 0;
+  min-height:calc(var(--target) - .75rem)}
+textarea::placeholder{color:var(--ink-secondary)}
+/* L'anneau de focus du champ est celui de tout le monde, posé SUR le champ.
+   Aucune règle outline:none nulle part — la spine l'interdit sans exception,
+   et le motif « anneau reporté sur le conteneur » l'enfreignait à la lettre. */
+textarea:focus-visible{outline:3px solid var(--focus-ring);outline-offset:2px}
+.send{flex:none;width:var(--target);height:var(--target);border-radius:var(--r-sm);
+  background:var(--surface-overlay);border:1px solid var(--border-interactive);
+  color:var(--ink-disabled);font-size:1.125rem;cursor:not-allowed}
+
+.note{max-width:52rem;display:grid;gap:.5rem}
+.note div{font-size:.875rem;line-height:1.5;color:var(--ink-secondary);
+  padding-left:1.1rem;position:relative}
+.note div::before{content:"";position:absolute;left:0;top:.5rem;width:6px;height:6px;
+  border-radius:50%;background:var(--accent)}
+.note b{color:var(--ink-primary);font-weight:600}
+
+@media (max-width:49em){
+  main{padding:1rem}
+  .composer-wrap{padding:0 1rem 1rem}
+}
+</style>
+</head>
+<body>
+
+<p class="tag">Écran 4 · v3 — la jouabilité décide l'heure, puis le récapitulatif se pose</p>
+<p class="caption">Le vivier ne connaît que des <b>jours</b>, jamais des heures : le produit n'a donc aucune heure à proposer tant qu'il n'a pas de raison. La météo lui en donne une. <b>Les chiffres ci-dessous sont illustratifs</b> — seuls les seuils de FR-10 font autorité.</p>
+
+<div class="frame">
+  <div class="bar"><i></i><i></i><i></i><div class="url">exaequo.fr</div></div>
+  <main>
+    <section class="column" aria-label="Conversation">
+      <h1 class="sr-only">Conversation avec Ex Aequo</h1>
+
+      <div class="turn">
+        <p class="msg-bot"><span class="sr-only">Ex Aequo : </span>Deux terrains vous conviennent. Le parc de la Tête d'Or est en extérieur ; le club de Gerland est couvert.</p>
+        <div class="playability" role="group" aria-label="Conditions de jeu — chaleur">
+          <p class="head">Conditions de jeu — chaleur</p>
+          <p>Mercredi s'annonce à 34 °C en fin d'après-midi, et le parc de la Tête d'Or est en extérieur.</p>
+          <p class="alt">Je vous propose plutôt 19 h : il fera 26 °C.</p>
+          <button type="button" class="alt-btn">Jouer à 19 h</button>
+        </div>
+        <p class="msg-bot"><span class="sr-only">Ex Aequo : </span>Sur le court couvert de Gerland, la question ne se pose pas — je ne regarde alors aucune condition extérieure.</p>
+        <button type="button" class="commit" aria-label="Retenir ce créneau : Anna, mercredi 2 septembre, 19 h, parc de la Tête d'Or">Retenir ce créneau</button>
+      </div>
+
+      <div class="turn">
+        <p class="msg-bot"><span class="sr-only">Ex Aequo : </span>Anna est prévenue. Elle n'a pas confirmé.</p>
+        <div class="recap" role="group" aria-label="Rencontre avec Anna">
+          <div class="top">
+            <p class="name">Anna — tennis</p>
+            <span class="badge pending">En attente</span>
+          </div>
+          <p class="meta">Mercredi 2 septembre, 19 h</p>
+          <p class="meta">Parc de la Tête d'Or</p>
+          <p class="meta">Statut posé le 27 août</p>
+          <p class="blocked">Votre mercredi n'est plus proposé aux autres tant que cette rencontre tient.</p>
+        </div>
+      </div>
+
+      <div class="turn">
+        <p class="msg-bot"><span class="sr-only">Ex Aequo : </span>Je retiens que le mercredi vous va : on vous le proposera aussi.</p>
+        <p class="msg-bot"><span class="sr-only">Ex Aequo : </span>Une partie des personnes que je propose ne sont pas encore inscrites ici : elles peuvent ne jamais répondre. Votre créneau tient quand même, et le lieu aussi.</p>
+      </div>
+
+    </section>
+  </main>
+  <!-- Les trois satellites live : hors du flux visuel, hors des reperes,
+       presents et vides des le premier octet, jamais demontes ni remontes.
+       Le satellite de tour est VIDE AU REPOS : on ecrit d abord, on vide
+       ensuite -- vider puis ecrire dans la meme tache serait un remplacement,
+       et aria-relevant=additions exclut text : le tour ne serait pas annonce.
+       Aucune minuterie ne s interpose depuis la v3.3. -->
+  <div class="sr-only" role="log" aria-relevant="additions" aria-atomic="false"></div>
+  <div class="sr-only" role="status" aria-atomic="true"></div>
+  <div class="sr-only" role="status"></div>
+  <div class="composer-wrap">
+    <form>
+      <label class="sr-only" for="c1">Votre message</label>
+      <textarea id="c1" rows="1" placeholder="Écrivez votre message…"></textarea>
+      <button class="send" type="submit" disabled aria-label="Envoyer">↑</button>
+    </form>
+  </div>
+</div>
+
+<div class="note">
+  <div><b>L'ambre a un seul métier</b>, et la ligne du jour bloqué est depuis la v3 son détournement le plus tentant : elle ressemble à un avertissement, elle n'en est pas un. Elle s'écrit en <code>meta</code> / <code>ink-secondary</code>, comme tout ce qui informe sans alerter, séparée par un filet réel.</div>
+  <div><b>Deux mutations, dites au moment où elles arrivent.</b> Le mercredi de Thomas sort du vivier (jour bloqué) et son mercredi entre à son profil (jour gagné). Ni l'une ni l'autre ne peut se produire en silence : c'est la quatrième règle de la grammaire de l'honnêteté, et elle interdit de <b>taire</b>, pas seulement d'inventer.</div>
+  <div><b>Le blocage est volontairement trop large.</b> Une rencontre à 19 h retire toute la journée, parce que le vivier ne stocke pas d'heures. C'est le prix d'un choix, il se paie en disponibilité perdue et jamais en propositions fausses — et c'est écrit plutôt que laissé à découvrir.</div>
+  <div><b>La pastille porte toujours son mot.</b> Jamais une couleur seule, jamais une icône seule. Une pastille ambre sans mot pourrait passer pour décorative ; le mot ne le peut pas.</div>
+</div>
+
+<p class="tag">Anna accepte — la mutation sur place, sans message triomphal</p>
+
+<div class="frame">
+  <div class="bar"><i></i><i></i><i></i><div class="url">exaequo.fr</div></div>
+  <main>
+    <section class="column" aria-label="Conversation">
+      <h1 class="sr-only">Conversation avec Ex Aequo</h1>
+      <div class="turn">
+        <div class="recap" role="group" aria-label="Rencontre avec Anna">
+          <div class="top">
+            <p class="name">Anna — tennis</p>
+            <span class="badge confirmed">Confirmée</span>
+          </div>
+          <p class="meta">Mercredi 2 septembre, 19 h</p>
+          <p class="meta">Parc de la Tête d'Or</p>
+          <p class="meta">Confirmée le 28 août</p>
+          <p class="blocked">Votre mercredi n'est plus proposé aux autres tant que cette rencontre tient.</p>
+        </div>
+        <!-- Ce que la region de statut PRONONCE a cet instant. Rendu ici pour la lecture
+             de la maquette seulement : dans le produit, cette phrase est ecrite dans le
+             satellite role="status" pose plus bas, jamais dans un noeud par tour.
+             Sans role, donc : deux regions de statut annonceraient deux fois. -->
+        <p class="sr-only">Anna a confirmé la rencontre de mercredi 2 septembre à 19 h.</p>
+      </div>
+    </section>
+  </main>
+  <!-- Les trois satellites live : hors du flux visuel, hors des reperes,
+       presents et vides des le premier octet, jamais demontes ni remontes.
+       Le satellite de tour est VIDE AU REPOS : on ecrit d abord, on vide
+       ensuite -- vider puis ecrire dans la meme tache serait un remplacement,
+       et aria-relevant=additions exclut text : le tour ne serait pas annonce.
+       Aucune minuterie ne s interpose depuis la v3.3. -->
+  <div class="sr-only" role="log" aria-relevant="additions" aria-atomic="false"></div>
+  <div class="sr-only" role="status" aria-atomic="true"></div>
+  <div class="sr-only" role="status"></div>
+  <div class="composer-wrap">
+    <form>
+      <label class="sr-only" for="c2">Votre message</label>
+      <textarea id="c2" rows="1" placeholder="Écrivez votre message…"></textarea>
+      <button class="send" type="submit" disabled aria-label="Envoyer">↑</button>
+    </form>
+  </div>
+</div>
+
+<div class="note">
+  <div><b>Aucun nouveau message n'apparaît</b> — la pastille passe au vert <b>sur place</b>. Mais la mutation laisse deux traces : la date du changement, <b>visible</b>, et une région <code>role="status"</code> qui porte une <b>phrase complète</b>. C'est exactement pourquoi le fil visible <b>n'est plus une région live</b> depuis la v3.2 : posée sur le fil entier, une région polie annoncerait « Confirmée » tout nu, sans sujet. La règle « pas de message triomphal » est un choix <b>visuel</b>, jamais un choix d'annonce.</div>
+  <div><b>Le vert ne sert qu'à ce qui est acquis</b>, et il n'y a aucune animation de célébration. Rien ne clignote, rien ne réclame l'attention.</div>
+</div>
+
+<p class="tag">La valeur inconnue — le produit continue sans mentir</p>
+
+<div class="frame">
+  <div class="bar"><i></i><i></i><i></i><div class="url">exaequo.fr</div></div>
+  <main>
+    <section class="column" aria-label="Conversation">
+      <h1 class="sr-only">Conversation avec Ex Aequo</h1>
+      <div class="turn">
+        <p class="msg-bot"><span class="sr-only">Ex Aequo : </span>Je ne trouve aucun terrain de tennis ouvert dans votre secteur. Je continue sans lieu : vous pouvez retenir le créneau et convenir de l'endroit avec Anna.</p>
+        <div class="recap" role="group" aria-label="Rencontre avec Anna">
+          <div class="top">
+            <p class="name">Anna — tennis</p>
+            <span class="badge pending">En attente</span>
+          </div>
+          <p class="meta">Mercredi 2 septembre, 19 h</p>
+          <p class="meta">Lieu : <span class="unknown">je ne sais pas encore</span></p>
+          <p class="blocked">Votre mercredi n'est plus proposé aux autres tant que cette rencontre tient.</p>
+        </div>
+      </div>
+    </section>
+  </main>
+  <!-- Les trois satellites live : hors du flux visuel, hors des reperes,
+       presents et vides des le premier octet, jamais demontes ni remontes.
+       Le satellite de tour est VIDE AU REPOS : on ecrit d abord, on vide
+       ensuite -- vider puis ecrire dans la meme tache serait un remplacement,
+       et aria-relevant=additions exclut text : le tour ne serait pas annonce.
+       Aucune minuterie ne s interpose depuis la v3.3. -->
+  <div class="sr-only" role="log" aria-relevant="additions" aria-atomic="false"></div>
+  <div class="sr-only" role="status" aria-atomic="true"></div>
+  <div class="sr-only" role="status"></div>
+  <div class="composer-wrap">
+    <form>
+      <label class="sr-only" for="c3">Votre message</label>
+      <textarea id="c3" rows="1" placeholder="Écrivez votre message…"></textarea>
+      <button class="send" type="submit" disabled aria-label="Envoyer">↑</button>
+    </form>
+  </div>
+</div>
+
+<div class="note">
+  <div><b>L'inconnu n'est pas plus discret, il est différent.</b> Même lisibilité que tout autre texte — <code>ink-secondary</code>, 6,66:1 — et c'est <b>l'italique et les mots</b> qui le désignent. Une première version le rendait plus sombre : le texte portant la garantie d'honnêteté était devenu le moins lisible de l'interface.</div>
+  <div><b>Et l'inconnu se conjugue.</b> « Je ne sais pas encore », jamais « Lieu non déterminé » — la langue d'un champ vide dans une base, pas celle d'un interlocuteur qui admet une ignorance.</div>
+</div>
+
+</body>
+</html>

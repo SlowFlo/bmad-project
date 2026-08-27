@@ -1,0 +1,307 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ex Aequo — La page d'acceptation (FR-14)</title>
+<style>
+/* ============================================================
+   ÉCRAN 5 — LA PAGE D'ACCEPTATION DU PARTENAIRE (FR-14)        v3.4 · 2026-08-27
+   LA SEULE SURFACE DU PRODUIT QUI VIT HORS DU FIL.
+   Elle n'avait jamais été maquettée depuis sa création. Toute la conversion du
+   vivier d'amorçage en dépend : c'est le seul contact qu'un profil d'amorçage
+   aura jamais avec le produit, avec le SMS qui l'y amène.
+
+   v3.2 — LE FIL VISIBLE N EST PLUS UNE REGION LIVE. Il ne porte plus role="log" :
+   trois satellites masques (log pour le tour complet, status pour l etape, status
+   pour toute mutation d un bloc persistant) portent les annonces.
+   Ce qui s affiche et ce qui se prononce suivent desormais deux chemins.
+
+   v3.3 — LA MINUTERIE EST COUPEE. Une annonce est ecrite des qu elle est produite ;
+   aucun etat ne peut etre retenu. Le decouplage reste, pour la vraie raison : un fil
+   live est irreparable pour les mutations de composant.
+
+   v3.4 — SEPTIEME ETAT TERMINAL, la rencontre abandonnee par le demandeur. FR-13
+   passe a CINQ statuts : les quatre premiers decrivent tous la reponse du partenaire
+   et aucun n etait produit par l utilisateur qui renonce. Aucun message sortant ne
+   l annonce ; cette page est le seul endroit ou l abandon se dit.
+
+   Sections de spine qui gouvernent cet écran :
+     DESIGN.md     → Components (acceptance-page, button-quiet, focus-indicator) ·
+                     Colors · Typography · Do's and Don'ts
+     EXPERIENCE.md → Information Architecture (page d'acceptation) ·
+                     Component Patterns · State Patterns, « Les sept états de la
+                     page d'acceptation (FR-14) » · Les deux populations du vivier ·
+                     Key Flows, parcours 4
+
+   RÈGLES NON NÉGOCIABLES RENDUES ICI :
+     · Aucun button-primary. Rien n'est poussé sur cette page.
+     · « Accepter » et « Refuser » de rang STRICTEMENT égal — ni couleur, ni
+       taille, ni ordre qui privilégie l'acceptation.
+     · Aucune donnée du demandeur au-delà de son prénom. Aucun numéro nulle part.
+     · Aucun compte, aucune inscription, aucune navigation, aucun pied de page.
+     · La sortie du vivier est définitive et n'a AUCUN bouton de retour arrière.
+   LA SPINE L'EMPORTE SUR CETTE MAQUETTE EN CAS DE CONFLIT.
+   ============================================================ */
+:root{
+  --surface-base:#0B1220; --surface-raised:#111C2E; --surface-raised-hover:#1E314E;
+  --surface-overlay:#18263C;
+  --ink-primary:#E8EDF5; --ink-secondary:#94A3B8; --ink-disabled:#55677F;
+  --accent:#2DD4A7; --accent-quiet:#123A32;
+  --status-pending:#E8A33D; --status-pending-quiet:#3A2C13;
+  --border-interactive:#6B82A6; --border-strong:#8AA0C4; --focus-ring:#7DD3FC;
+  --r-sm:8px; --r-md:12px; --r-full:9999px;
+  --thread:45rem; --target:48px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#060A12;color:var(--ink-primary);
+  font-family:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;
+  padding:2.5rem 1rem;display:flex;flex-direction:column;align-items:center;gap:1rem}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;
+  clip:rect(0 0 0 0);white-space:nowrap;border:0}
+.caption{color:var(--ink-secondary);font-size:.875rem;line-height:1.45;max-width:52rem;text-align:center}
+.caption b{color:var(--ink-primary);font-weight:600}
+.tag{font-size:.8125rem;font-weight:500;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--ink-secondary);margin-top:1.5rem}
+
+.frame{width:100%;max-width:62rem;background:var(--surface-base);
+  border:1px solid var(--border-interactive);border-radius:12px;overflow:hidden}
+.frame.phone{max-width:24.5rem;border-radius:24px}
+.bar{display:flex;align-items:center;gap:.5rem;padding:.5rem .875rem;
+  border-bottom:1px solid var(--border-interactive);background:#080E1A}
+.bar i{width:10px;height:10px;border-radius:50%;background:var(--border-interactive);display:block}
+.url{margin-left:.75rem;flex:1;max-width:24rem;border:1px solid var(--border-interactive);
+  border-radius:var(--r-full);padding:.25rem .875rem;font-size:.75rem;color:var(--ink-secondary);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* --- components.acceptance-page --- */
+.page{max-width:var(--thread);margin:0 auto;padding:32px 16px;display:flex;
+  flex-direction:column;gap:24px}
+.page h1{font-size:1.75rem;font-weight:600;line-height:1.2;letter-spacing:-.02em}
+.page p{font-size:1.0625rem;line-height:1.6}
+.page p.meta{font-size:.875rem;line-height:1.45;color:var(--ink-secondary)}
+.demande{background:var(--surface-raised);border:1px solid var(--border-interactive);
+  border-radius:var(--r-md);padding:16px;display:grid;gap:8px}
+.demande .line{font-size:1.0625rem;line-height:1.6}
+.demande .who{font-size:1.0625rem;font-weight:600;line-height:1.3}
+.answers{display:flex;gap:12px;flex-wrap:wrap}
+.answers button{flex:1 1 12rem;background:transparent;border:1px solid var(--border-interactive);
+  border-radius:var(--r-sm);color:var(--ink-primary);font-family:inherit;font-size:.8125rem;
+  font-weight:500;letter-spacing:.02em;padding:12px 24px;min-height:var(--target);cursor:pointer}
+.answers button:hover{background:var(--surface-raised-hover);border-color:var(--border-strong)}
+.answers button:focus-visible{outline:3px solid var(--focus-ring);outline-offset:2px}
+.exit{align-self:flex-start;background:transparent;border:1px solid var(--border-interactive);
+  border-radius:var(--r-sm);color:var(--ink-primary);font-family:inherit;font-size:.8125rem;
+  font-weight:500;letter-spacing:.02em;padding:12px 24px;min-height:var(--target);cursor:pointer}
+.exit:hover{background:var(--surface-raised-hover);border-color:var(--border-strong)}
+.exit:focus-visible{outline:3px solid var(--focus-ring);outline-offset:2px}
+.rule{border:0;border-top:1px solid var(--border-interactive)}
+/* Le conflit de créneaux BLOQUE (FR-14). Il constate un fait accompli, il ne
+   demande pas d'arbitrer — mais il n'est pas non plus une alerte : pas de teinte
+   de statut, l'ambre et le rose-rouge ont chacun un seul métier. */
+.conflict{background:var(--surface-raised);border:1px solid var(--border-interactive);
+  border-radius:var(--r-sm);padding:16px}
+.conflict .head{font-size:.8125rem;font-weight:500;letter-spacing:.02em;
+  text-transform:uppercase;color:var(--ink-secondary);margin-bottom:8px}
+.badge{display:inline-block;border-radius:var(--r-full);padding:4px 12px;font-size:.8125rem;
+  font-weight:500;letter-spacing:.02em}
+.badge.done{background:var(--accent-quiet);color:var(--accent)}
+.badge.no{background:var(--surface-overlay);color:var(--ink-primary)}
+
+.grid{width:100%;max-width:62rem;display:grid;gap:1rem;grid-template-columns:repeat(2,1fr)}
+.grid .frame{max-width:none}
+@media (max-width:60em){ .grid{grid-template-columns:1fr} }
+
+.note{max-width:52rem;display:grid;gap:.5rem}
+.note div{font-size:.875rem;line-height:1.5;color:var(--ink-secondary);
+  padding-left:1.1rem;position:relative}
+.note div::before{content:"";position:absolute;left:0;top:.5rem;width:6px;height:6px;
+  border-radius:50%;background:var(--accent)}
+.note b{color:var(--ink-primary);font-weight:600}
+.sms{max-width:52rem;background:var(--surface-raised);border:1px solid var(--border-interactive);
+  border-radius:var(--r-md);padding:16px;font-size:.9375rem;line-height:1.6;color:var(--ink-primary)}
+</style>
+</head>
+<body>
+
+<p class="tag">Écran 5 · v3 — la page d'acceptation, seule surface hors du fil</p>
+<p class="caption">Anna figure dans les données d'amorçage. Elle n'a pas de compte, n'a jamais entendu parler d'Ex Aequo, et ne parlera jamais au bot. <b>Sans cette page, aucune rencontre du produit ne peut jamais être confirmée.</b></p>
+
+<div class="sms">
+  <p style="color:var(--ink-secondary);font-size:.8125rem;letter-spacing:.06em;text-transform:uppercase;margin-bottom:.5rem">Le SMS qui l'amène ici</p>
+  Vous ne me connaissez pas : votre nom figure dans les données de départ d'Ex Aequo, un service qui met en relation des joueurs de même niveau. Quelqu'un y cherche un partenaire de tennis, mercredi 2 septembre à 19 h, au parc de la Tête d'Or. Vous pouvez accepter ou refuser ici : [lien]. Pour ne plus jamais recevoir de message : [lien].
+</div>
+
+<p class="tag">État 1 — invitation ouverte</p>
+
+<div class="frame">
+  <div class="bar"><i></i><i></i><i></i><div class="url">exaequo.fr/r/8f2c1a…</div></div>
+  <main class="page">
+    <h1>Quelqu'un cherche un partenaire de tennis.</h1>
+    <p>Votre nom figure dans les données de départ d'Ex Aequo, un service qui met en relation des joueurs de même niveau. Vous n'avez rien à créer et rien à installer : répondez ici, c'est tout.</p>
+    <div class="demande" role="group" aria-label="La demande">
+      <p class="who">Thomas</p>
+      <p class="line">Tennis — mercredi 2 septembre, 19 h</p>
+      <p class="line">Parc de la Tête d'Or</p>
+    </div>
+    <div class="answers">
+      <button type="button">Accepter</button>
+      <button type="button">Refuser</button>
+    </div>
+    <hr class="rule">
+    <p class="meta">Vous pouvez aussi quitter Ex Aequo définitivement. Vous ne recevrez plus jamais de message, pour aucune demande.</p>
+    <button class="exit" type="button">Sortir du vivier définitivement</button>
+  </main>
+</div>
+
+<div class="note">
+  <div><b>Deux boutons de rang strictement égal.</b> Ni couleur, ni taille, ni ordre qui privilégie l'acceptation, et <b>aucun <code>button-primary</code> sur cette page</b>. Le produit qui a passé tout le parcours du demandeur à ne pas lui forcer la main ne va pas forcer celle de quelqu'un qui n'a rien demandé.</div>
+  <div><b>Le prénom du demandeur, et rien d'autre sur lui.</b> Ni son niveau, ni son historique, ni un moyen de le contacter. Aucun numéro de téléphone n'apparaît nulle part — ni ici, ni dans le fil, ni dans l'événement d'agenda.</div>
+  <div><b>La sortie est visible et parfaitement lisible</b>, séparée par un filet réel, mais placée après la décision : elle n'est pas une troisième réponse à la demande, c'est une décision sur le service entier.</div>
+</div>
+
+<p class="tag">États 2 et 3 — acceptée, refusée</p>
+
+<div class="grid">
+  <div class="frame">
+    <div class="bar"><i></i><div class="url">exaequo.fr/r/8f2c1a…</div></div>
+    <main class="page">
+      <h1>C'est noté.</h1>
+      <p>Thomas est prévenu, et la rencontre est confirmée dans son agenda.</p>
+      <div class="demande" role="group" aria-label="Votre réponse">
+        <p class="line"><span class="badge done">Acceptée</span></p>
+        <p class="line">Tennis — mercredi 2 septembre, 19 h</p>
+        <p class="line">Parc de la Tête d'Or</p>
+      </div>
+      <p class="meta">Ce lien ne fonctionne plus.</p>
+    </main>
+  </div>
+  <div class="frame">
+    <div class="bar"><i></i><div class="url">exaequo.fr/r/8f2c1a…</div></div>
+    <main class="page">
+      <h1>C'est noté.</h1>
+      <p>Thomas est prévenu. Son créneau est libre, il pourra chercher quelqu'un d'autre.</p>
+      <div class="demande" role="group" aria-label="Votre réponse">
+        <p class="line"><span class="badge no">Refusée</span></p>
+        <p class="line">Tennis — mercredi 2 septembre, 19 h</p>
+      </div>
+      <p class="meta">Ce lien ne fonctionne plus. Vous restez dans le vivier : d'autres demandes pourront vous parvenir.</p>
+    </main>
+  </div>
+</div>
+
+<div class="note">
+  <div><b>Aucun motif n'est demandé sur le refus</b>, et aucune tentative de rattrapage. Le bandeau de refus ne s'excuse pas et ne culpabilise pas — c'est le même titre que l'acceptation, parce que les deux réponses sont également légitimes.</div>
+  <div><b>Le refus dit ce qu'il ne fait pas.</b> Refuser une rencontre n'est pas quitter le service : la page le précise, sans quoi la seule façon d'en être sûr serait de partir.</div>
+</div>
+
+<p class="tag">États 4, 5 et 6 — lien déjà utilisé, lien expiré, profil désinscrit</p>
+
+<div class="grid">
+  <div class="frame">
+    <div class="bar"><i></i><div class="url">exaequo.fr/r/8f2c1a…</div></div>
+    <main class="page">
+      <h1>Vous avez déjà répondu.</h1>
+      <p>Le 28 août, vous avez <b>accepté</b> cette rencontre : tennis, mercredi 2 septembre à 19 h, au parc de la Tête d'Or.</p>
+      <p class="meta">Ce lien ne fonctionne plus. Il n'y a rien d'autre à faire ici.</p>
+    </main>
+  </div>
+  <div class="frame">
+    <div class="bar"><i></i><div class="url">exaequo.fr/r/8f2c1a…</div></div>
+    <main class="page">
+      <h1>Cette demande est passée.</h1>
+      <p>Elle portait sur mercredi 2 septembre, et ce jour est derrière nous. Vous n'aviez pas répondu ; personne ne vous l'a reproché et personne ne vous le reprochera.</p>
+      <hr class="rule">
+      <p class="meta">Si vous ne souhaitez plus recevoir ce genre de message, c'est ici.</p>
+      <button class="exit" type="button">Sortir du vivier définitivement</button>
+    </main>
+  </div>
+</div>
+
+<div class="frame" style="max-width:38rem">
+  <div class="bar"><i></i><div class="url">exaequo.fr/r/8f2c1a…</div></div>
+  <main class="page">
+    <h1>Vous êtes sorti du vivier.</h1>
+    <p>Vous ne serez plus contacté, pour aucune demande. Votre nom ne sera proposé à personne.</p>
+    <p class="meta">Cette page ne propose rien d'autre.</p>
+  </main>
+</div>
+
+<div class="note">
+  <div><b>Le lien déjà utilisé n'est jamais une erreur nue.</b> La page dit <b>laquelle</b> des deux réponses a été donnée, et <b>quand</b> : la personne doit pouvoir vérifier ce qu'elle a répondu. Une page « lien invalide » lui retirerait cette possibilité.</div>
+  <div><b>Le lien expiré ne fait pas de reproche</b> et propose la seule action qui reste utile — la sortie du vivier.</div>
+  <div><b>Le profil désinscrit n'a aucun bouton de retour arrière.</b> Une sortie définitive qui se reprend d'un clic n'est pas définitive. C'est le seul mécanisme qui fait rétrécir le vivier, et il prime sur toute considération de densité.</div>
+</div>
+
+<p class="tag">État 7 — le demandeur a abandonné, né de la resynchronisation v3.4</p>
+
+<div class="frame" style="max-width:38rem">
+  <div class="bar"><i></i><div class="url">exaequo.fr/r/8f2c1a…</div></div>
+  <main class="page">
+    <h1>Thomas a finalement renoncé à cette proposition.</h1>
+    <p>Il cherchait un partenaire de tennis pour le mercredi 2 septembre à 19 h, au parc de la Tête d'Or. Il a laissé tomber cette recherche avant que vous répondiez. <b>Vous n'avez rien à faire.</b></p>
+    <hr class="rule">
+    <p class="meta">Aucun message ne vous a été envoyé pour vous l'annoncer : ce lien est le seul contact que ce service aura eu avec vous.</p>
+    <p class="meta">Si vous ne souhaitez plus recevoir ce genre de message, c'est ici.</p>
+    <button class="exit" type="button">Sortir du vivier définitivement</button>
+  </main>
+</div>
+
+<div class="note">
+  <div><b>Le cinquième statut de FR-13 est né d'un trou.</b> Les quatre autres décrivent tous la <b>réponse du partenaire</b> ; aucun n'était produit par l'utilisateur qui renonce. Router l'abandon vers <i>déclinée</i> aurait fait dire au bot qu'Anna a refusé alors qu'elle n'a rien répondu — dans le produit dont la contrainte la plus structurante est qu'il n'invente rien.</div>
+  <div><b>Cette page est le seul endroit où l'abandon s'annonce.</b> Aucun SMS, aucun courriel : l'invariant « le SMS est le seul contact qu'un profil d'amorçage aura jamais avec le produit » tient, et c'est ce lien-ci, suivi par curiosité ou par habitude, qui porte l'information.</div>
+  <div><b>Jamais présentée comme un refus du demandeur.</b> Thomas a renoncé à <i>chercher</i>, il n'a pas jugé Anna. La page nomme l'objet du renoncement — la proposition, jamais la personne — et rien n'y doit laisser l'inverse se lire.</div>
+  <div><b>Elle propose la sortie du vivier</b>, exactement comme le lien expiré : c'est la seule action qui reste utile à quelqu'un qui n'a plus rien à répondre.</div>
+</div>
+
+<p class="tag">Variante — conflit de créneaux : l'acceptation échoue</p>
+
+<div class="frame">
+  <div class="bar"><i></i><i></i><i></i><div class="url">exaequo.fr/r/8f2c1a…</div></div>
+  <main class="page">
+    <h1>Ce créneau ne peut plus être accepté.</h1>
+    <p>Vous avez déjà confirmé une rencontre le mercredi 2 septembre à 18 h. Les deux se chevauchent, donc celle-ci ne peut pas tenir.</p>
+    <div class="conflict" role="group" aria-label="Ce qui a été demandé">
+      <p class="head">Ce qui a été demandé</p>
+      <p>Thomas — tennis, mercredi 2 septembre à 19 h, au parc de la Tête d'Or.</p>
+    </div>
+    <div class="demande" role="group" aria-label="Ce qui a été fait">
+      <p class="line"><span class="badge no">Déclinée</span></p>
+      <p class="line">Thomas est prévenu. Son créneau est libre, il pourra chercher quelqu'un d'autre.</p>
+    </div>
+    <p class="meta">Votre rencontre de 18 h n'est pas affectée. Ce lien ne fonctionne plus.</p>
+  </main>
+</div>
+
+<div class="note">
+  <div><b>La page bloque, et c'est FR-14 qui l'exige</b> — « deux acceptations qui se chevauchent sont impossibles ». L'acceptation <b>échoue</b>, la page le dit, et la rencontre passe en <i>déclinée</i>. Aucun bouton : il n'y a rien à trancher, l'autre rencontre est déjà confirmée.</div>
+  <div><b>Une version antérieure de cette maquette laissait le choix</b> et écrivait « vous êtes la seule à savoir si elles tiennent ». C'était une décision produit inversée en silence. Ce qui reste vrai de l'intuition : le produit ne connaît que des <i>jours</i>, jamais des durées — et c'est justement pourquoi il ne peut pas arbitrer. FR-16 bloque déjà le jour entier dès l'état <i>en attente</i> ; ce conflit résiduel n'est que la fenêtre de course entre deux validations quasi simultanées.</div>
+  <div><b>La page dit aussi ce qui n'est pas perdu</b> — la rencontre de 18 h tient. C'est la règle de ton du produit sur tout message d'échec, et elle vaut hors du fil comme dedans.</div>
+  <div><b>Aucune couleur d'alerte.</b> L'ambre appartient au seul statut <i>en attente</i> et le rose-rouge à la seule jouabilité. L'encadré porte un mot en tête, un filet réel, et de l'encre primaire.</div>
+</div>
+
+<p class="tag">L'adaptation — téléphone, là où ce lien sera réellement ouvert</p>
+
+<div class="frame phone">
+  <div class="bar"><i></i><div class="url">exaequo.fr/r/8f2c1a…</div></div>
+  <main class="page">
+    <h1>Quelqu'un cherche un partenaire de tennis.</h1>
+    <p>Votre nom figure dans les données de départ d'Ex Aequo, un service qui met en relation des joueurs de même niveau.</p>
+    <div class="demande" role="group" aria-label="La demande">
+      <p class="who">Thomas</p>
+      <p class="line">Tennis — mercredi 2 septembre, 19 h</p>
+      <p class="line">Parc de la Tête d'Or</p>
+    </div>
+    <div class="answers">
+      <button type="button">Accepter</button>
+      <button type="button">Refuser</button>
+    </div>
+    <hr class="rule">
+    <button class="exit" type="button">Sortir du vivier définitivement</button>
+  </main>
+</div>
+
+<p class="caption">Le lien arrive par <b>SMS</b> : le téléphone est le cadre réel de cette surface, contrairement au reste du produit. Les deux réponses restent côte à côte tant que la largeur le permet, puis passent l'une sous l'autre — <b>jamais dans un ordre qui change</b>.</p>
+
+</body>
+</html>

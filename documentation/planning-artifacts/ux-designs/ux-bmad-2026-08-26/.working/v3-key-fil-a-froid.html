@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ex Aequo — Le fil à froid</title>
+<style>
+/* ============================================================
+   ÉCRAN 1 — LE FIL À FROID, VISITEUR INCONNU                    v3 · 2026-08-27
+   Cadre canonique : navigateur de PC. Le téléphone est l'adaptation.
+
+   Sections de spine qui gouvernent cet écran :
+     DESIGN.md     → Brand & Style · Colors · Typography · Layout & Spacing · Shapes
+     EXPERIENCE.md → Foundation · Information Architecture · State Patterns
+                     (fil à froid inconnu) · Accessibility Floor
+
+   REFAITE EN v3. Corrigés depuis la v1 : border-decorative (jeton supprimé du
+   système), outline:none sur la zone de saisie (interdit absolu), <input>
+   remplacé par <textarea>, aria-label sur <div> nu remplacé par des rôles réels.
+   LA SPINE L'EMPORTE SUR CETTE MAQUETTE EN CAS DE CONFLIT.
+   ============================================================ */
+:root{
+  --surface-base:#0B1220; --surface-raised:#111C2E; --surface-raised-hover:#1E314E;
+  --surface-overlay:#18263C; --surface-user:#1B2C46;
+  --ink-primary:#E8EDF5; --ink-secondary:#94A3B8; --ink-disabled:#55677F;
+  --ink-on-accent:#04241C; --accent:#2DD4A7;
+  --border-interactive:#6B82A6; --border-strong:#8AA0C4; --focus-ring:#7DD3FC;
+  --r-sm:8px; --r-md:12px; --r-lg:18px; --r-full:9999px;
+  --thread:45rem; --target:48px; --gutter:32px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#060A12;color:var(--ink-primary);
+  font-family:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;
+  padding:2.5rem 1rem;display:flex;flex-direction:column;align-items:center;gap:1.5rem}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;
+  clip:rect(0 0 0 0);white-space:nowrap;border:0}
+.caption{color:var(--ink-secondary);font-size:.875rem;line-height:1.45;max-width:52rem;text-align:center}
+.caption b{color:var(--ink-primary);font-weight:600}
+.tag{font-size:.8125rem;font-weight:500;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--ink-secondary)}
+
+/* --- cadres de présentation : DÉCOR, hors produit, hors jetons --- */
+.frame{width:100%;max-width:74rem;background:var(--surface-base);
+  border:1px solid var(--border-interactive);border-radius:12px;overflow:hidden;
+  display:flex;flex-direction:column;min-height:38rem}
+.frame.phone{max-width:24.5rem;min-height:42rem;border-radius:24px}
+.bar{flex:none;display:flex;align-items:center;gap:.5rem;padding:.5rem .875rem;
+  border-bottom:1px solid var(--border-interactive);background:#080E1A}
+.bar i{width:10px;height:10px;border-radius:50%;background:var(--border-interactive);display:block}
+.url{margin-left:.75rem;flex:1;max-width:21rem;border:1px solid var(--border-interactive);
+  border-radius:var(--r-full);padding:.25rem .875rem;font-size:.75rem;color:var(--ink-secondary)}
+
+/* --- le vide latéral, matérialisé hors produit --- */
+.void{position:relative;flex:1;display:flex;justify-content:center;
+  padding:4rem var(--gutter) 0}
+.void::before,.void::after{content:"";position:absolute;top:1rem;bottom:1rem;width:1px;
+  border-left:1px dashed var(--border-interactive);opacity:.5}
+.void::before{left:calc(50% - var(--thread)/2 - var(--gutter))}
+.void::after{right:calc(50% - var(--thread)/2 - var(--gutter))}
+.voidnote{position:absolute;top:1rem;left:50%;transform:translateX(calc(-50% - var(--thread)/2 - var(--gutter) - 1rem));
+  writing-mode:vertical-rl;font-size:.6875rem;color:var(--ink-secondary);opacity:.8}
+
+/* --- le produit --- */
+.column{width:100%;max-width:var(--thread);display:flex;flex-direction:column;gap:1rem}
+h1{font-size:1.75rem;font-weight:600;line-height:1.2;letter-spacing:-.02em}
+.sub{font-size:1.0625rem;line-height:1.6;color:var(--ink-primary)}
+.composer-wrap{flex:none;padding:1.5rem var(--gutter) 1.75rem;display:flex;
+  flex-direction:column;align-items:center;gap:.5rem}
+form{width:100%;max-width:var(--thread);background:var(--surface-overlay);
+  border:1px solid var(--border-interactive);border-radius:var(--r-lg);
+  min-height:var(--target);display:flex;align-items:flex-end;gap:.75rem;padding:.375rem .375rem .375rem 1rem}
+textarea{flex:1;background:transparent;border:0;color:var(--ink-primary);resize:none;
+  font-family:inherit;font-size:1.0625rem;line-height:1.6;padding:.6875rem 0;
+  min-height:calc(var(--target) - .75rem);max-height:8.5rem;field-sizing:content}
+textarea::placeholder{color:var(--ink-secondary)}
+/* L'anneau de focus du champ n'est JAMAIS supprimé — il est porté par le conteneur. */
+form:focus-within{outline:3px solid var(--focus-ring);outline-offset:2px}
+textarea:focus{outline:none} /* l'anneau est sur le conteneur, pas retiré du système */
+.send{flex:none;width:var(--target);height:var(--target);border-radius:var(--r-sm);
+  background:var(--surface-overlay);border:1px solid var(--border-interactive);
+  color:var(--ink-disabled);font-size:1.125rem;cursor:not-allowed}
+.hint{width:100%;max-width:var(--thread);font-size:.875rem;line-height:1.45;
+  color:var(--ink-secondary)}
+
+@media (max-width:49em){
+  .void{padding:2rem 1rem 0}
+  .void::before,.void::after,.voidnote{display:none}
+  .composer-wrap{padding:1rem}
+  h1{font-size:1.5rem}
+}
+</style>
+</head>
+<body>
+
+<p class="tag">Écran 1 · v3 — le fil à froid, visiteur inconnu</p>
+<p class="caption">Le cadre canonique est le <b>navigateur de PC</b>. Le vide latéral est un <b>parti de conception</b>, pas un espace non utilisé : la colonne reste bornée à 45 rem parce qu'au-delà de ~75 caractères par ligne la lecture se dégrade et le produit bascule vers l'application de gestion. Les traits pointillés sont du décor d'explication, hors produit.</p>
+
+<div class="frame">
+  <div class="bar"><i></i><i></i><i></i><div class="url">exaequo.fr</div></div>
+  <div class="void">
+    <span class="voidnote">colonne bornée à 45 rem</span>
+    <div class="column">
+      <h1>Trouvez quelqu'un à votre niveau.</h1>
+      <p class="sub">Dites-moi quel sport, quels jours, et à quel niveau vous jouez. Je cherche dans le vivier et je vous dis ce que j'y trouve — ou qu'il n'y a personne.</p>
+    </div>
+  </div>
+  <div class="composer-wrap">
+    <form>
+      <label class="sr-only" for="c1">Votre message</label>
+      <textarea id="c1" rows="1" placeholder="Écrivez votre demande…" autofocus></textarea>
+      <button class="send" type="submit" disabled aria-label="Envoyer">↑</button>
+    </form>
+    <p class="hint">Par exemple : « je veux jouer au tennis mardi après-midi, je suis intermédiaire ».</p>
+  </div>
+</div>
+
+<p class="caption"><b>Ce que l'écran engage.</b> Le champ est <b>focalisé au chargement</b> — c'est le mécanisme d'accès, et aucun raccourci clavier n'est requis pour l'atteindre. C'est un <code>&lt;textarea&gt;</code> et non un <code>&lt;input&gt;</code> : la croissance sur quatre lignes et Maj+Entrée l'exigent. <b>Aucune demande de compte</b>, aucun écran d'authentification en amont. L'exemple de phrase sous le champ montre qu'on parle en langage naturel — il ne se clique pas.</p>
+
+<p class="tag">L'adaptation — téléphone, 360 px et plus</p>
+
+<div class="frame phone">
+  <div class="bar"><i></i><div class="url">exaequo.fr</div></div>
+  <div class="void">
+    <div class="column">
+      <h1>Trouvez quelqu'un à votre niveau.</h1>
+      <p class="sub">Dites-moi quel sport, quels jours, et à quel niveau vous jouez. Je cherche dans le vivier et je vous dis ce que j'y trouve — ou qu'il n'y a personne.</p>
+    </div>
+  </div>
+  <div class="composer-wrap">
+    <form>
+      <label class="sr-only" for="c2">Votre message</label>
+      <textarea id="c2" rows="1" placeholder="Écrivez votre demande…"></textarea>
+      <button class="send" type="submit" disabled aria-label="Envoyer">↑</button>
+    </form>
+    <p class="hint">Par exemple : « je veux jouer au tennis mardi après-midi, je suis intermédiaire ».</p>
+  </div>
+</div>
+
+<p class="caption"><b>Parité fonctionnelle complète.</b> Le même produit, sans rien en moins. Le point de rupture est <b>un jeton</b> — <code>breakpoint = 49rem = thread-max-width + 2 × gutter</code> — exprimé en <code>em</code> dans la requête média pour que le zoom texte le déclenche.</p>
+
+</body>
+</html>

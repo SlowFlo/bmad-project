@@ -1,0 +1,293 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ex Aequo — Proposition de partenaires</title>
+<style>
+/* ============================================================
+   ÉCRAN 3 — LA PROPOSITION DE PARTENAIRES                       v3.3 · 2026-08-27
+   L'écran héros : c'est ici que se joue le pari « prose + cartes ».
+   Élargissement sur le JOUR — le seul élargissement du produit depuis que
+   FR-7 est retirée. Les trois candidats sont au niveau STRICTEMENT ÉGAL.
+
+   v3.2 — LE FIL VISIBLE N EST PLUS UNE REGION LIVE. Il ne porte plus role="log" :
+   trois satellites masques (log pour le tour complet, status pour l etape, status
+   pour toute mutation d un bloc persistant) portent les annonces.
+   Ce qui s affiche et ce qui se prononce suivent desormais deux chemins.
+
+   v3.3 — LA MINUTERIE EST COUPEE. Une annonce est ecrite des qu elle est produite ;
+   aucun etat ne peut etre retenu. Le decouplage reste, pour la vraie raison : un fil
+   live est irreparable pour les mutations de composant.
+
+   Sections de spine qui gouvernent cet écran :
+     DESIGN.md     → Colors · Typography · Layout & Spacing · Elevation & Depth ·
+                     Shapes · Components (partner-card, candidate-group-label)
+     EXPERIENCE.md → Foundation · Component Patterns (message du bot, message de
+                     la personne, ligne d'étape, carte de partenaire, intitulé de
+                     groupe) · State Patterns (recherche en cours, élargissement
+                     sur le jour) · Accessibility Floor · Key Flows, parcours 1
+                     étapes 3 à 6
+
+   REFAITE EN v3. Le niveau QUITTE la carte et monte dans l'intitulé de groupe ;
+   la ligne meta de la carte passe aux jours et au délai d'attente. L'état
+   « élargissement sur le niveau » et l'écart de niveau sont supprimés.
+   Corrigés depuis la v1 : border-decorative, outline:none, <input>, aria-label
+   sur <div> nu, sort d'une carte inerte en suffixe masqué.
+   LA SPINE L'EMPORTE SUR CETTE MAQUETTE EN CAS DE CONFLIT.
+   ============================================================ */
+:root{
+  --surface-base:#0B1220; --surface-raised:#111C2E; --surface-raised-hover:#1E314E;
+  --surface-raised-pressed:#24395C; --surface-overlay:#18263C; --surface-user:#1B2C46;
+  --ink-primary:#E8EDF5; --ink-secondary:#94A3B8; --ink-disabled:#55677F;
+  --accent:#2DD4A7;
+  --border-interactive:#6B82A6; --border-strong:#8AA0C4; --focus-ring:#7DD3FC;
+  --r-sm:8px; --r-md:12px; --r-lg:18px; --r-full:9999px;
+  --thread:45rem; --target:48px; --gutter:32px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#060A12;color:var(--ink-primary);
+  font-family:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;
+  padding:2.5rem 1rem;display:flex;flex-direction:column;align-items:center;gap:1.5rem}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;
+  clip:rect(0 0 0 0);white-space:nowrap;border:0}
+.caption{color:var(--ink-secondary);font-size:.875rem;line-height:1.45;max-width:52rem;text-align:center}
+.caption b{color:var(--ink-primary);font-weight:600}
+.tag{font-size:.8125rem;font-weight:500;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--ink-secondary);margin-top:1rem}
+
+.frame{width:100%;max-width:74rem;background:var(--surface-base);
+  border:1px solid var(--border-interactive);border-radius:12px;overflow:hidden;
+  display:flex;flex-direction:column;min-height:44rem}
+.frame.phone{max-width:24.5rem;min-height:46rem;border-radius:24px}
+.bar{flex:none;display:flex;align-items:center;gap:.5rem;padding:.5rem .875rem;
+  border-bottom:1px solid var(--border-interactive);background:#080E1A}
+.bar i{width:10px;height:10px;border-radius:50%;background:var(--border-interactive);display:block}
+.url{margin-left:.75rem;flex:1;max-width:21rem;border:1px solid var(--border-interactive);
+  border-radius:var(--r-full);padding:.25rem .875rem;font-size:.75rem;color:var(--ink-secondary)}
+
+main{flex:1;display:flex;justify-content:center;padding:2rem var(--gutter) 0}
+.column{width:100%;max-width:var(--thread)}
+.turn{margin-bottom:2rem}
+.msg-bot{font-size:1.0625rem;line-height:1.6;margin-bottom:1.5rem}
+.msg-bot + .msg-bot{margin-top:-1rem}
+.msg-user{background:var(--surface-user);border-radius:var(--r-lg);padding:12px 16px;
+  font-size:1.0625rem;line-height:1.6;max-width:80%;margin-left:auto;width:fit-content;
+  margin-bottom:1.5rem}
+
+/* --- components.step-line --- */
+.steps{list-style:none;margin:0 0 1.5rem;padding:0;display:grid;gap:4px}
+.steps li{display:flex;align-items:baseline;gap:.625rem;font-size:.875rem;line-height:1.45;
+  color:var(--ink-secondary);padding:4px 0}
+.steps li::before{content:"";flex:none;width:6px;height:6px;border-radius:50%;
+  background:var(--accent);transform:translateY(-1px)}
+/* Une étape franchie garde son point à PLEINE opacité. La pulsation, et elle
+   seule, distingue l'étape en cours — et elle est bornée à 5 secondes. */
+.steps li.now::before{animation:pulse 1.4s ease-in-out 3}
+@keyframes pulse{50%{transform:translateY(-1px) scale(.55)}}
+@media (prefers-reduced-motion:reduce){.steps li.now::before{animation:none}}
+
+/* --- components.candidate-group-label (NOUVEAU en v3) --- */
+.group-label{font-size:.875rem;line-height:1.45;color:var(--ink-secondary);padding-bottom:8px}
+
+/* --- components.partner-card --- */
+.cards{display:grid;gap:12px}
+.card{display:block;width:100%;text-align:left;background:var(--surface-raised);
+  border:1px solid var(--border-interactive);border-radius:var(--r-md);
+  color:var(--ink-primary);font-family:inherit;padding:16px;min-height:var(--target);
+  cursor:pointer}
+.card:hover{background:var(--surface-raised-hover);border-color:var(--border-strong)}
+.card:active{background:var(--surface-raised-pressed);border-color:var(--border-strong)}
+.card:focus-visible{outline:3px solid var(--focus-ring);outline-offset:2px}
+.card .name{display:block;font-size:1.0625rem;font-weight:600;line-height:1.3}
+.card .meta{display:block;font-size:.875rem;line-height:1.45;color:var(--ink-secondary);
+  margin-top:8px}
+.card.is-hover{background:var(--surface-raised-hover);border-color:var(--border-strong)}
+.card.is-focus{outline:3px solid var(--focus-ring);outline-offset:2px}
+/* Inerte : plus de rôle de bouton, plus de curseur, et LE MOT VISIBLE. */
+.card.inert{cursor:default;background:var(--surface-raised);border-color:var(--border-interactive)}
+.card.inert .verdict{display:block;font-size:.8125rem;font-weight:500;letter-spacing:.02em;
+  color:var(--ink-primary);margin-top:8px}
+
+.composer-wrap{flex:none;padding:1.5rem var(--gutter) 1.75rem;display:flex;justify-content:center}
+form{width:100%;max-width:var(--thread);background:var(--surface-overlay);
+  border:1px solid var(--border-interactive);border-radius:var(--r-lg);min-height:var(--target);
+  display:flex;align-items:flex-end;gap:.75rem;padding:.375rem .375rem .375rem 1rem}
+textarea{flex:1;background:transparent;border:0;color:var(--ink-primary);resize:none;
+  font-family:inherit;font-size:1.0625rem;line-height:1.6;padding:.6875rem 0;
+  min-height:calc(var(--target) - .75rem)}
+textarea::placeholder{color:var(--ink-secondary)}
+/* L'anneau de focus du champ est celui de tout le monde, posé SUR le champ.
+   Aucune règle outline:none nulle part — la spine l'interdit sans exception,
+   et le motif « anneau reporté sur le conteneur » l'enfreignait à la lettre. */
+textarea:focus-visible{outline:3px solid var(--focus-ring);outline-offset:2px}
+.send{flex:none;width:var(--target);height:var(--target);border-radius:var(--r-sm);
+  background:var(--surface-overlay);border:1px solid var(--border-interactive);
+  color:var(--ink-disabled);font-size:1.125rem;cursor:not-allowed}
+
+.note{max-width:52rem;display:grid;gap:.5rem}
+.note div{font-size:.875rem;line-height:1.5;color:var(--ink-secondary);
+  padding-left:1.1rem;position:relative}
+.note div::before{content:"";position:absolute;left:0;top:.5rem;width:6px;height:6px;
+  border-radius:50%;background:var(--accent)}
+.note b{color:var(--ink-primary);font-weight:600}
+
+@media (max-width:49em){
+  main{padding:1rem 1rem 0}
+  .composer-wrap{padding:1rem}
+}
+</style>
+</head>
+<body>
+
+<p class="tag">Écran 3 · v3 — la proposition, après élargissement sur le jour</p>
+<p class="caption">Le cas <b>majoritaire</b> : 127 combinaisons sur 231 ne rendent rien à l'exact, et l'élargissement sur le jour en rattrape 113. La mauvaise nouvelle arrive en premier, sans coussin et sans excuse.</p>
+
+<div class="frame">
+  <div class="bar"><i></i><i></i><i></i><div class="url">exaequo.fr</div></div>
+  <main>
+    <section class="column" aria-label="Conversation">
+      <h1 class="sr-only">Conversation avec Ex Aequo</h1>
+      <div class="turn">
+        <div class="msg-user"><span class="sr-only">Vous : </span>je veux jouer au tennis mardi aprem, je suis intermédiaire</div>
+      </div>
+      <div class="turn">
+        <p class="msg-bot"><span class="sr-only">Ex Aequo : </span>Tennis, mardi, intermédiaire. Je cherche.</p>
+        <ul class="steps">
+          <li>J'ai cherché au tennis, le mardi, à votre niveau.</li>
+          <li>Personne le mardi. J'ai regardé les autres jours.</li>
+          <li class="now">Je classe par délai d'attente…</li>
+        </ul>
+        <p class="msg-bot"><span class="sr-only">Ex Aequo : </span>Personne à votre niveau au tennis le mardi. En revanche trois personnes jouent exactement à votre niveau, d'autres jours.</p>
+        <div role="group" aria-label="Trois intermédiaires, comme vous">
+          <p class="group-label">Trois intermédiaires, comme vous.</p>
+          <div class="cards">
+            <button class="card" type="button">
+              <span class="name">Anna</span>
+              <span class="meta">Mercredi, samedi · dans 1 jour</span>
+            </button>
+            <button class="card is-hover" type="button">
+              <span class="name">Iris</span>
+              <span class="meta">Lundi, mercredi · dans 1 jour</span>
+            </button>
+            <button class="card is-focus" type="button">
+              <span class="name">Tessa</span>
+              <span class="meta">Lundi, samedi · dans 4 jours</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+  <!-- Les trois satellites live : hors du flux visuel, hors des reperes,
+       presents et vides des le premier octet, jamais demontes ni remontes.
+       Le satellite de tour est VIDE AU REPOS : on ecrit d abord, on vide
+       ensuite -- vider puis ecrire dans la meme tache serait un remplacement,
+       et aria-relevant=additions exclut text : le tour ne serait pas annonce.
+       Aucune minuterie ne s interpose depuis la v3.3. -->
+  <div class="sr-only" role="log" aria-relevant="additions" aria-atomic="false"></div>
+  <div class="sr-only" role="status" aria-atomic="true"></div>
+  <div class="sr-only" role="status"></div>
+  <div class="composer-wrap">
+    <form>
+      <label class="sr-only" for="c1">Votre message</label>
+      <textarea id="c1" rows="1" placeholder="Écrivez, ou choisissez une carte…"></textarea>
+      <button class="send" type="submit" disabled aria-label="Envoyer">↑</button>
+    </form>
+  </div>
+</div>
+
+<div class="note">
+  <div><b>Le niveau a quitté la carte, et c'est le changement de fond de la v3.</b> Sous l'égalité stricte de FR-5, les trois candidats sont toujours du même niveau : répété sur chaque carte c'est du bruit, absent c'est la promesse rendue invisible. Il monte donc dans <code>candidate-group-label</code>, porté <b>une fois</b> — et qui nomme aussi le <code>role="group"</code>.</div>
+  <div><b>Ce que la ligne meta gagne à la place.</b> Les jours, et le <b>délai d'attente</b> — le nombre de jours à attendre depuis le mardi demandé. C'est ce qui différencie réellement les trois, et c'est aussi la règle d'ordre de FR-6 : le plus tôt d'abord, l'ordre du vivier départageant les ex æquo.</div>
+  <div><b>Les trois états sont montrés en même temps</b> — repos, survol pointeur, focus clavier. Le survol est porté par le <b>filet</b> <code>border-strong</code> (4,93:1) ; le fond ne fait que 1,31:1 et ne confirme que. Rien ne bouge, rien ne se redimensionne, aucune ombre portée.</div>
+  <div><b>Les cartes sont un raccourci, jamais le seul chemin.</b> Tout ce qui est cliquable est aussi dicible : le champ reste actif et « Anna » tapé fait la même chose que le clic.</div>
+</div>
+
+<p class="tag">Le tour résolu — les cartes deviennent inertes et portent leur sort</p>
+
+<div class="frame" style="min-height:auto">
+  <div class="bar"><i></i><i></i><i></i><div class="url">exaequo.fr</div></div>
+  <main style="padding-bottom:2rem">
+    <section class="column" aria-label="Conversation">
+      <h1 class="sr-only">Conversation avec Ex Aequo</h1>
+      <div class="turn" style="margin-bottom:0">
+        <div role="group" aria-label="Trois intermédiaires, comme vous">
+          <p class="group-label">Trois intermédiaires, comme vous.</p>
+          <div class="cards">
+            <div class="card inert">
+              <span class="name">Anna</span>
+              <span class="meta">Mercredi, samedi · dans 1 jour</span>
+              <span class="verdict">Retenue</span>
+            </div>
+            <div class="card inert">
+              <span class="name">Iris</span>
+              <span class="meta">Lundi, mercredi · dans 1 jour</span>
+              <span class="verdict">Non retenue</span>
+            </div>
+            <div class="card inert">
+              <span class="name">Tessa</span>
+              <span class="meta">Lundi, samedi · dans 4 jours</span>
+              <span class="verdict">Non retenue</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+  <!-- Les trois satellites live : hors du flux visuel, hors des reperes,
+       presents et vides des le premier octet, jamais demontes ni remontes.
+       Le satellite de tour est VIDE AU REPOS : on ecrit d abord, on vide
+       ensuite -- vider puis ecrire dans la meme tache serait un remplacement,
+       et aria-relevant=additions exclut text : le tour ne serait pas annonce.
+       Aucune minuterie ne s interpose depuis la v3.3. -->
+  <div class="sr-only" role="log" aria-relevant="additions" aria-atomic="false"></div>
+  <div class="sr-only" role="status" aria-atomic="true"></div>
+  <div class="sr-only" role="status"></div>
+</div>
+
+<div class="note">
+  <div><b>Un mot visible, pas un filet plus discret.</b> La carte perd son rôle de bouton, sort de l'ordre de tabulation, perd le curseur main — et <b>écrit son sort</b>. Le mot est la seule forme qui survive au contraste forcé, à la basse vision et à l'absence de pointeur. La v1 le mettait en suffixe masqué ; c'était invisible pour tout le monde sauf le lecteur d'écran.</div>
+  <div><b>Le focus est déplacé, pas perdu.</b> Si le focus est sur la carte au moment où elle devient inerte, il passe sur le message du tour, qui porte <code>tabindex="-1"</code>. Sans cela il retomberait dans le vide.</div>
+</div>
+
+<p class="tag">L'adaptation — téléphone</p>
+
+<div class="frame phone">
+  <div class="bar"><i></i><div class="url">exaequo.fr</div></div>
+  <main>
+    <section class="column" aria-label="Conversation">
+      <h1 class="sr-only">Conversation avec Ex Aequo</h1>
+      <div class="turn">
+        <p class="msg-bot"><span class="sr-only">Ex Aequo : </span>Personne à votre niveau au tennis le mardi. En revanche trois personnes jouent exactement à votre niveau, d'autres jours.</p>
+        <div role="group" aria-label="Trois intermédiaires, comme vous">
+          <p class="group-label">Trois intermédiaires, comme vous.</p>
+          <div class="cards">
+            <button class="card" type="button"><span class="name">Anna</span><span class="meta">Mercredi, samedi · dans 1 jour</span></button>
+            <button class="card" type="button"><span class="name">Iris</span><span class="meta">Lundi, mercredi · dans 1 jour</span></button>
+            <button class="card" type="button"><span class="name">Tessa</span><span class="meta">Lundi, samedi · dans 4 jours</span></button>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+  <!-- Les trois satellites live : hors du flux visuel, hors des reperes,
+       presents et vides des le premier octet, jamais demontes ni remontes.
+       Le satellite de tour est VIDE AU REPOS : on ecrit d abord, on vide
+       ensuite -- vider puis ecrire dans la meme tache serait un remplacement,
+       et aria-relevant=additions exclut text : le tour ne serait pas annonce.
+       Aucune minuterie ne s interpose depuis la v3.3. -->
+  <div class="sr-only" role="log" aria-relevant="additions" aria-atomic="false"></div>
+  <div class="sr-only" role="status" aria-atomic="true"></div>
+  <div class="sr-only" role="status"></div>
+  <div class="composer-wrap">
+    <form>
+      <label class="sr-only" for="c2">Votre message</label>
+      <textarea id="c2" rows="1" placeholder="Écrivez, ou choisissez…"></textarea>
+      <button class="send" type="submit" disabled aria-label="Envoyer">↑</button>
+    </form>
+  </div>
+</div>
+
+</body>
+</html>

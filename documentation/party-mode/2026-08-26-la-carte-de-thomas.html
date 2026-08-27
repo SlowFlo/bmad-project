@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>La carte de Thomas — séance du 26 août 2026</title>
+<style>
+  :root{
+    --base:#0B1220; --raised:#111C2E; --overlay:#18263C; --user:#1B2C46;
+    --ink:#E8EDF5; --ink2:#94A3B8; --acc:#2DD4A7; --acc-quiet:#123A32;
+    --pend:#E8A33D; --pend-quiet:#3A2C13; --dang:#F0637A; --dang-quiet:#3B1620;
+    --bi:#6B82A6; --bs:#8AA0C4; --focus:#7DD3FC;
+    --col:45rem;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    background:var(--base); color:var(--ink);
+    font-family:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;
+    font-size:1.0625rem; line-height:1.6;
+    padding:0 2rem 6rem;
+  }
+  .col{max-width:var(--col); margin:0 auto}
+  header{padding:5rem 0 3rem; border-bottom:1px solid var(--bi)}
+  .kicker{font-size:.8125rem; letter-spacing:.08em; text-transform:uppercase; color:var(--acc); font-weight:500}
+  h1{font-size:2.25rem; line-height:1.15; letter-spacing:-.02em; font-weight:600; margin:.6rem 0 .4rem}
+  .sub{color:var(--ink2); font-size:.9375rem}
+  h2{font-size:1.3rem; letter-spacing:-.01em; font-weight:600; margin:3.5rem 0 1.2rem; display:flex; align-items:center; gap:.6rem}
+  h2::before{content:""; width:7px; height:7px; border-radius:50%; background:var(--acc); flex:none}
+  h2.live::before{animation:pulse 2.4s ease-in-out infinite}
+  @keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.45;transform:scale(.75)}}
+  @media (prefers-reduced-motion:reduce){h2.live::before{animation:none}}
+
+  .cast{display:grid; grid-template-columns:repeat(auto-fit,minmax(15rem,1fr)); gap:.75rem; margin-top:1.5rem}
+  .who{background:var(--raised); border:1px solid var(--bi); border-radius:12px; padding:1rem 1.1rem}
+  .who .top{display:flex; align-items:baseline; gap:.55rem}
+  .who .icon{font-size:1.15rem}
+  .who .name{font-weight:600; letter-spacing:-.01em}
+  .who .role{color:var(--ink2); font-size:.8125rem}
+  .who .sig{margin-top:.65rem; color:var(--ink2); font-size:.9375rem; font-style:italic; border-left:2px solid var(--bs); padding-left:.7rem}
+
+  .beat{margin:2rem 0; padding-left:1.3rem; border-left:1px solid var(--bi)}
+  .beat .n{font-size:.75rem; letter-spacing:.1em; color:var(--ink2); text-transform:uppercase}
+  .beat h3{font-size:1.0625rem; font-weight:600; margin:.25rem 0 .6rem}
+  .beat p{margin:0 0 .7rem}
+  .line{display:flex; gap:.6rem; margin:.55rem 0}
+  .line .ic{flex:none; width:1.5rem; text-align:center}
+  .line .sp{color:var(--ink)}
+  .line .sp b{font-weight:600}
+  .line q{quotes:"«\00a0" "\00a0»"}
+
+  .hero{background:var(--raised); border:1px solid var(--bi); border-radius:12px; padding:1.6rem; margin:2rem 0; text-align:center}
+  .hero .big{font-size:3rem; font-weight:600; letter-spacing:-.03em; line-height:1.05}
+  .hero .big .old{color:var(--ink2); font-size:1.75rem; font-weight:400}
+  .hero .cap{color:var(--ink2); font-size:.9375rem; margin-top:.6rem}
+
+  .two{display:grid; grid-template-columns:1fr 1fr; gap:.75rem; margin-top:1.2rem}
+  @media (max-width:34rem){.two{grid-template-columns:1fr}}
+  .box{border-radius:12px; padding:1rem 1.1rem; border:1px solid var(--bi); background:var(--raised)}
+  .box h4{margin:0 0 .6rem; font-size:.8125rem; letter-spacing:.06em; text-transform:uppercase; font-weight:500}
+  .box.dead h4{color:var(--dang)}
+  .box.alive h4{color:var(--acc)}
+  .box ul{margin:0; padding-left:1.1rem}
+  .box li{margin:.3rem 0; font-size:.9375rem; color:var(--ink2)}
+  .box.alive li{color:var(--ink)}
+
+  .tally{display:flex; gap:.75rem; align-items:stretch; margin-top:1.2rem}
+  @media (max-width:34rem){.tally{flex-direction:column}}
+  .tally .side{flex:1; background:var(--raised); border:1px solid var(--bi); border-radius:12px; padding:1rem 1.1rem}
+  .tally .side .nm{font-weight:600; display:flex; gap:.5rem; align-items:baseline}
+  .tally .side .q{margin-top:.6rem; font-style:italic; color:var(--ink2); font-size:.9375rem}
+  .vs{display:flex; align-items:center; justify-content:center; color:var(--ink2); font-size:.8125rem; letter-spacing:.1em}
+
+  .find{background:var(--acc-quiet); border:1px solid var(--acc); border-radius:12px; padding:1.4rem 1.5rem; margin:2rem 0}
+  .find .tag{font-size:.75rem; letter-spacing:.1em; text-transform:uppercase; color:var(--acc); font-weight:600}
+  .find p{margin:.5rem 0 0}
+
+  .badge{display:inline-block; font-size:.75rem; letter-spacing:.04em; text-transform:uppercase; font-weight:600;
+         padding:.15rem .6rem; border-radius:999px; background:var(--pend-quiet); color:var(--pend)}
+  .badge.ok{background:var(--acc-quiet); color:var(--acc)}
+
+  footer{margin-top:4rem; padding-top:1.5rem; border-top:1px solid var(--bi); color:var(--ink2); font-size:.875rem}
+  a{color:var(--focus)}
+  svg .plate{transition:none}
+</style>
+</head>
+<body>
+<div class="col">
+
+<header>
+  <div class="kicker">Séance du 26 août 2026 · Ex Aequo</div>
+  <h1>La carte de Thomas</h1>
+  <div class="sub">Cinq personnes autour d'une table, une question sur le niveau — et une trouvaille qui n'était pas la leur.</div>
+</header>
+
+<h2>Qui était là</h2>
+<div class="cast">
+  <div class="who">
+    <div class="top"><span class="icon">📊</span><span class="name">Mary</span><span class="role">Analyste métier</span></div>
+    <div class="sig">L'absence n'est pas honnête, elle est juste immobile.</div>
+  </div>
+  <div class="who">
+    <div class="top"><span class="icon">📋</span><span class="name">John</span><span class="role">Product Manager</span></div>
+    <div class="sig">Combien de tours avant la première proposition ?</div>
+  </div>
+  <div class="who">
+    <div class="top"><span class="icon">🎨</span><span class="name">Sally</span><span class="role">UX</span></div>
+    <div class="sig">Pas faux, pas illégal. Mort.</div>
+  </div>
+  <div class="who">
+    <div class="top"><span class="icon">🏗️</span><span class="name">Winston</span><span class="role">Architecte</span></div>
+    <div class="sig">Je ne les fabrique pas, les compromis. Je les trouve. Ils étaient déjà là.</div>
+  </div>
+  <div class="who">
+    <div class="top"><span class="icon">💻</span><span class="name">Amelia</span><span class="role">Dev senior</span></div>
+    <div class="sig">Trou.</div>
+  </div>
+</div>
+
+<h2 class="live">L'arc de la séance</h2>
+
+<div class="beat">
+  <div class="n">Tour 1 — l'entrée en matière</div>
+  <h3>Sally tire la première, John compte les tours</h3>
+  <div class="line"><span class="ic">🎨</span><span class="sp"><b>Sally :</b> Il est 22 h, le type a trois minutes d'attention. Si le bot répond <q>très bien, à quelle fréquence jouez-vous ?</q> — c'est mort.</span></div>
+  <div class="line"><span class="ic">📋</span><span class="sp"><b>John :</b> Combien de tours avant la première proposition ?</span></div>
+  <div class="line"><span class="ic">🎨</span><span class="sp"><b>Sally :</b> Là n'est pas le—</span></div>
+  <div class="line"><span class="ic">📋</span><span class="sp"><b>John :</b> Combien.</span></div>
+</div>
+
+<div class="beat">
+  <div class="n">Tour 1 — le coup de Mary</div>
+  <h3>La balance dont un plateau était faux</h3>
+  <p>On retirait l'inflation du niveau côté utilisateur. Mais les 86 profils du vivier portaient des niveaux <b>déclarés</b>, assis dans le CSV depuis le premier jour, sans provenance.</p>
+  <div class="line"><span class="ic">📊</span><span class="sp"><b>Mary :</b> On a retiré l'inflation du côté où elle se voyait.</span></div>
+  <svg viewBox="0 0 240 84" width="100%" height="84" role="img" aria-label="Une balance dont le plateau droit est plus bas que le gauche">
+    <line x1="120" y1="16" x2="120" y2="72" stroke="#6B82A6" stroke-width="2"/>
+    <line x1="106" y1="72" x2="134" y2="72" stroke="#6B82A6" stroke-width="2"/>
+    <g transform="rotate(-9 120 20)">
+      <line x1="46" y1="20" x2="194" y2="20" stroke="#8AA0C4" stroke-width="2"/>
+      <line x1="52" y1="20" x2="52" y2="38" stroke="#6B82A6" stroke-width="1.5"/>
+      <line x1="188" y1="20" x2="188" y2="38" stroke="#6B82A6" stroke-width="1.5"/>
+      <path class="plate" d="M36 38 h32 l-6 12 h-20 z" fill="#123A32" stroke="#2DD4A7" stroke-width="1.5"/>
+      <path class="plate" d="M172 38 h32 l-6 12 h-20 z" fill="#3B1620" stroke="#F0637A" stroke-width="1.5"/>
+    </g>
+    <circle cx="120" cy="20" r="3.5" fill="#2DD4A7"/>
+  </svg>
+</div>
+
+<div class="find">
+  <div class="tag">La trouvaille de la séance — et elle n'était pas de la table</div>
+  <p><b>« Il nous faut le niveau, ne serait-ce que pour l'enregistrer en base — sinon on ne pourra rien montrer pour le prochain utilisateur. »</b></p>
+  <p>Le vivier est <b>réciproque</b>. Thomas n'est pas un chercheur : c'est un chercheur <i>et</i> une carte. Cinq relecteurs adverses avaient épluché deux documents entiers — compté les jetons, recalculé vingt-deux ratios de contraste, relevé dix-huit contradictions — sans jamais demander à quoi ressemble la carte de Thomas une fois qu'il est devenu candidat.</p>
+  <p>Tout le reste de la séance est tombé de cette seule question.</p>
+</div>
+
+<div class="beat">
+  <div class="n">Tour 4 — la conséquence</div>
+  <h3>Le coût de « en attente » n'était pas celui qu'on croyait</h3>
+  <div class="line"><span class="ic">🎨</span><span class="sp"><b>Sally :</b> Ce matin, quand on a écrit l'état <i>en attente</i>, on croyait que le coût était <b>émotionnel</b>. On s'est félicités.</span></div>
+  <div class="line"><span class="ic">🏗️</span><span class="sp"><b>Winston :</b> Le coût vient de devenir mécanique.</span></div>
+  <div class="line"><span class="ic">🎨</span><span class="sp"><b>Sally :</b> <i>En attente</i> n'est plus un état d'affichage. C'est un état qui retire quelqu'un du marché.</span></div>
+  <p style="margin-top:1rem">Et le statut ajouté le matin même pour une raison de politesse — <span class="badge">expirée</span> — s'est révélé être le <b>ramasse-miettes du vivier</b> : le seul mécanisme qui débloque un profil pris par une rencontre fantôme.</p>
+</div>
+
+<h2>Le chiffre qui a tout tranché</h2>
+<div class="hero">
+  <div class="big">6,1&nbsp;% <span class="old">contre 5,2&nbsp;%</span></div>
+  <div class="cap">Combinaisons sport × niveau sans aucun candidat, avec et sans l'élargissement sur le niveau.<br>
+  Le mécanisme qu'on protégeait depuis le matin achetait <b>un point de couverture</b>. Il est mort dans la minute.</div>
+</div>
+
+<h2>Ce qui est mort, ce qui a survécu</h2>
+<div class="two">
+  <div class="box dead">
+    <h4>Enterré</h4>
+    <ul>
+      <li>La règle d'adjacence des niveaux</li>
+      <li>L'élargissement sur le niveau</li>
+      <li>Les trois régimes de sport <i>(nés et morts en douze minutes)</i></li>
+      <li>Le niveau affiché sur les cartes</li>
+      <li>L'état <i>Sport hors vivier</i></li>
+      <li>FR-15, dans sa quasi-totalité</li>
+    </ul>
+  </div>
+  <div class="box alive">
+    <h4>Debout</h4>
+    <ul>
+      <li>Le bot ne demande jamais le niveau <b>pendant la recherche</b></li>
+      <li>Trois valeurs, une fois, à l'entrée au vivier</li>
+      <li>Le mot flou n'est jamais interprété ni stocké</li>
+      <li>Blocage par jour, jamais par personne</li>
+      <li><i>Déclinée</i> libère immédiatement</li>
+      <li>Le cycle de vie d'un profil, écrit pour la première fois</li>
+    </ul>
+  </div>
+</div>
+
+<h2>Mary contre Winston</h2>
+<div class="tally">
+  <div class="side">
+    <div class="nm"><span>📊</span><span>Mary</span><span class="badge ok" style="margin-left:auto">1 concession</span></div>
+    <div class="q">« Le choix d'une personne est bruité, le choix d'un jour ne l'est pas. » — quatre passes d'armes, une seule perdue.</div>
+  </div>
+  <div class="vs">VS</div>
+  <div class="side">
+    <div class="nm"><span>🏗️</span><span>Winston</span><span class="badge ok" style="margin-left:auto">1 concession</span></div>
+    <div class="q">« J'ai dit d'accord. Tu as raison sur celui-là et tu avais tort sur l'autre. » — puis, aussitôt : « Prends ce qu'on te donne. »</div>
+  </div>
+</div>
+<p style="color:var(--ink2); font-size:.9375rem; margin-top:1rem">John a retiré <b>deux</b> objections dans la même séance, ce qui l'a visiblement contrarié. Sally a perdu ses trois phrases sur les régimes de sport douze minutes après les avoir imaginées. Amelia n'a jamais parlé plus de deux phrases d'affilée et a trouvé trois trous que personne n'avait vus.</p>
+
+<h2>Le mot de la fin</h2>
+<div class="beat" style="border-left-color:var(--acc)">
+  <div class="line"><span class="ic">📋</span><span class="sp"><b>John :</b> On a fini. Et ce qui me plaît, c'est qu'on repart avec <b>moins</b> de produit qu'en arrivant.</span></div>
+</div>
+
+<footer>
+  Séance <code>bmad-party-mode</code> du 26 août 2026 — Fbautry, et cinq voix qui ne se sont pas mises d'accord sur tout.<br>
+  Décisions à porter en amont : <code>planning-artifacts/prds/prd-bmad-2026-08-26/decisions-2026-08-26-niveau.md</code><br>
+  Rendu dans la palette d'Ex Aequo, parce qu'il fallait bien.
+</footer>
+
+</div>
+</body>
+</html>

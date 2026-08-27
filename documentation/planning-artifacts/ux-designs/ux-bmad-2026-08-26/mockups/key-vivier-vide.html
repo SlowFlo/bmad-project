@@ -1,0 +1,303 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ex Aequo — Le vivier vide</title>
+<style>
+/* ============================================================
+   ÉCRAN 7 — LE VIVIER VIDE, ET LE SPORT HORS VIVIER            v3.3 · 2026-08-27
+   Le parcours que la spine dit devoir être « le mieux écrit du produit ».
+   Sa part a DOUBLÉ en v3 : sans l'élargissement de niveau de FR-7, le résidu
+   de refus complet passe de 3,0 % à 6,1 % — 14 combinaisons sur 231.
+
+   Entièrement porté par de la PROSE : aucune carte, aucun composant riche.
+   C'est précisément pourquoi il méritait d'être rendu — un écran sans
+   composant est un écran qu'on croit à tort ne pas avoir à concevoir.
+
+   v3.2 — LE FIL VISIBLE N EST PLUS UNE REGION LIVE. Il ne porte plus role="log" :
+   trois satellites masques (log pour le tour complet, status pour l etape, status
+   pour toute mutation d un bloc persistant) portent les annonces.
+   Ce qui s affiche et ce qui se prononce suivent desormais deux chemins.
+
+   v3.3 — LA MINUTERIE EST COUPEE. Une annonce est ecrite des qu elle est produite ;
+   aucun etat ne peut etre retenu. Le decouplage reste, pour la vraie raison : un fil
+   live est irreparable pour les mutations de composant.
+
+   Sections de spine qui gouvernent cet écran :
+     DESIGN.md     → Brand & Style · Colors · Typography · Layout & Spacing
+     EXPERIENCE.md → Voice and Tone (formulations arrêtées, règles de ton 1 et 5) ·
+                     State Patterns (vivier vide, sport hors vivier, alerte
+                     différée posée) · La grammaire de l'honnêteté ·
+                     Key Flows, parcours 2
+
+   DEUX ÉTATS DISTINCTS, ET C'EST NOUVEAU EN v3 :
+     · Vivier vide  — le sport existe, personne À CE NIVEAU.
+     · Sport hors vivier — le vivier ne connaît pas ce sport du tout.
+   La v2 n'en avait qu'un, et sa phrase était FACTUELLEMENT FAUSSE.
+   LA SPINE L'EMPORTE SUR CETTE MAQUETTE EN CAS DE CONFLIT.
+   ============================================================ */
+:root{
+  --surface-base:#0B1220; --surface-raised:#111C2E; --surface-raised-hover:#1E314E;
+  --surface-overlay:#18263C; --surface-user:#1B2C46;
+  --ink-primary:#E8EDF5; --ink-secondary:#94A3B8; --ink-disabled:#55677F;
+  --accent:#2DD4A7;
+  --border-interactive:#6B82A6; --border-strong:#8AA0C4; --focus-ring:#7DD3FC;
+  --r-sm:8px; --r-md:12px; --r-lg:18px; --r-full:9999px;
+  --thread:45rem; --target:48px; --gutter:32px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#060A12;color:var(--ink-primary);
+  font-family:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;
+  padding:2.5rem 1rem;display:flex;flex-direction:column;align-items:center;gap:1rem}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;
+  clip:rect(0 0 0 0);white-space:nowrap;border:0}
+.caption{color:var(--ink-secondary);font-size:.875rem;line-height:1.45;max-width:52rem;text-align:center}
+.caption b{color:var(--ink-primary);font-weight:600}
+.tag{font-size:.8125rem;font-weight:500;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--ink-secondary);margin-top:1.5rem}
+
+.frame{width:100%;max-width:70rem;background:var(--surface-base);
+  border:1px solid var(--border-interactive);border-radius:12px;overflow:hidden;
+  display:flex;flex-direction:column}
+.bar{flex:none;display:flex;align-items:center;gap:.5rem;padding:.5rem .875rem;
+  border-bottom:1px solid var(--border-interactive);background:#080E1A}
+.bar i{width:10px;height:10px;border-radius:50%;background:var(--border-interactive);display:block}
+.url{margin-left:.75rem;flex:1;max-width:21rem;border:1px solid var(--border-interactive);
+  border-radius:var(--r-full);padding:.25rem .875rem;font-size:.75rem;color:var(--ink-secondary)}
+
+main{flex:1;display:flex;justify-content:center;padding:2rem var(--gutter) 0}
+.column{width:100%;max-width:var(--thread)}
+.turn{margin-bottom:2rem}
+.msg-bot{font-size:1.0625rem;line-height:1.6;margin-bottom:1.5rem}
+.msg-bot:last-child{margin-bottom:0}
+.msg-user{background:var(--surface-user);border-radius:var(--r-lg);padding:12px 16px;
+  font-size:1.0625rem;line-height:1.6;max-width:80%;margin-left:auto;width:fit-content;
+  margin-bottom:1.5rem}
+
+.steps{list-style:none;margin:0 0 1.5rem;padding:0;display:grid;gap:4px}
+.steps li{display:flex;align-items:baseline;gap:.625rem;font-size:.875rem;line-height:1.45;
+  color:var(--ink-secondary);padding:4px 0}
+.steps li::before{content:"";flex:none;width:6px;height:6px;border-radius:50%;
+  background:var(--accent);transform:translateY(-1px)}
+
+.level-choice{background:var(--surface-raised);border:1px solid var(--border-interactive);
+  border-radius:var(--r-md);padding:16px;display:flex;flex-direction:column;gap:12px}
+.opt{background:transparent;border:1px solid var(--border-interactive);border-radius:var(--r-sm);
+  color:var(--ink-primary);font-family:inherit;padding:12px 24px;min-height:var(--target);
+  cursor:pointer;text-align:left;display:block;width:100%}
+.opt:hover{background:var(--surface-raised-hover);border-color:var(--border-strong)}
+.opt:focus-visible{outline:3px solid var(--focus-ring);outline-offset:2px}
+.opt .word{display:block;font-size:1.0625rem;font-weight:600;line-height:1.3}
+.opt .fact{display:block;font-size:.875rem;font-weight:400;line-height:1.45;
+  color:var(--ink-secondary);margin-top:4px}
+
+/* Le bloc d'alerte est le SEUL bloc du fil qui reste interactif après son tour :
+   il porte son annulation. C'est ce qui le distingue du récapitulatif. */
+.alert-block{background:var(--surface-raised);border:1px solid var(--border-interactive);
+  border-radius:var(--r-md);padding:16px;display:grid;gap:12px}
+.alert-block .name{font-size:1.0625rem;font-weight:600;line-height:1.3}
+.alert-block .meta{font-size:.875rem;line-height:1.45;color:var(--ink-secondary)}
+.alert-block button{justify-self:start;background:transparent;border:1px solid var(--border-interactive);
+  border-radius:var(--r-sm);color:var(--ink-primary);font-family:inherit;font-size:.8125rem;
+  font-weight:500;letter-spacing:.02em;padding:12px 24px;min-height:var(--target);cursor:pointer}
+.alert-block button:hover{background:var(--surface-raised-hover);border-color:var(--border-strong)}
+.alert-block button:focus-visible{outline:3px solid var(--focus-ring);outline-offset:2px}
+
+.composer-wrap{flex:none;padding:1.5rem var(--gutter) 1.75rem;display:flex;justify-content:center}
+form{width:100%;max-width:var(--thread);background:var(--surface-overlay);
+  border:1px solid var(--border-interactive);border-radius:var(--r-lg);min-height:var(--target);
+  display:flex;align-items:flex-end;gap:.75rem;padding:.375rem .375rem .375rem 1rem}
+textarea{flex:1;background:transparent;border:0;color:var(--ink-primary);resize:none;
+  font-family:inherit;font-size:1.0625rem;line-height:1.6;padding:.6875rem 0;
+  min-height:calc(var(--target) - .75rem)}
+textarea::placeholder{color:var(--ink-secondary)}
+/* L'anneau de focus du champ est celui de tout le monde, posé SUR le champ.
+   Aucune règle outline:none nulle part — la spine l'interdit sans exception,
+   et le motif « anneau reporté sur le conteneur » l'enfreignait à la lettre. */
+textarea:focus-visible{outline:3px solid var(--focus-ring);outline-offset:2px}
+.send{flex:none;width:var(--target);height:var(--target);border-radius:var(--r-sm);
+  background:var(--surface-overlay);border:1px solid var(--border-interactive);
+  color:var(--ink-disabled);font-size:1.125rem;cursor:not-allowed}
+
+.note{max-width:52rem;display:grid;gap:.5rem}
+.note div{font-size:.875rem;line-height:1.5;color:var(--ink-secondary);
+  padding-left:1.1rem;position:relative}
+.note div::before{content:"";position:absolute;left:0;top:.5rem;width:6px;height:6px;
+  border-radius:50%;background:var(--accent)}
+.note .against::before{background:var(--ink-disabled)}
+.note b{color:var(--ink-primary);font-weight:600}
+.wrong{max-width:52rem;background:var(--surface-raised);border:1px solid var(--border-interactive);
+  border-radius:var(--r-md);padding:16px;font-size:.875rem;line-height:1.55;color:var(--ink-secondary)}
+.wrong b{color:var(--ink-primary);font-weight:600}
+.wrong s{color:var(--ink-secondary)}
+
+@media (max-width:49em){
+  main{padding:1rem 1rem 0}
+  .composer-wrap{padding:1rem}
+}
+</style>
+</head>
+<body>
+
+<p class="tag">Écran 7 · v3 — le vivier vide (parcours 2, Nadia)</p>
+<p class="caption">Nadia pratique le Pilates. Le vivier compte <b>une seule autre pratiquante, débutante</b> — et l'appariement est à niveau strictement égal. Aucun élargissement ne la sauvera : le seul que le produit connaisse porte sur le jour.</p>
+
+<div class="frame">
+  <div class="bar"><i></i><i></i><i></i><div class="url">exaequo.fr</div></div>
+  <main>
+    <section class="column" aria-label="Conversation">
+      <h1 class="sr-only">Conversation avec Ex Aequo</h1>
+
+      <div class="turn">
+        <div class="msg-user"><span class="sr-only">Vous : </span>je cherche quelqu'un pour faire du Pilates le mardi</div>
+      </div>
+
+      <div class="turn">
+        <p class="msg-bot"><span class="sr-only">Ex Aequo : </span>Pilates, le mardi. Il me manque votre niveau — c'est ce qui permettra de vous trouver quelqu'un d'équivalent.</p>
+        <div class="level-choice" role="group" aria-label="Votre niveau">
+          <button class="opt" type="button"><span class="word">Débutant</span><span class="fact">Je débute, ou je reprends après une longue coupure.</span></button>
+          <button class="opt" type="button"><span class="word">Intermédiaire</span><span class="fact">Je pratique régulièrement depuis un moment.</span></button>
+          <button class="opt" type="button"><span class="word">Avancé</span><span class="fact">Je suis en compétition, ou je m'entraîne pour.</span></button>
+        </div>
+      </div>
+
+      <div class="turn">
+        <div class="msg-user"><span class="sr-only">Vous : </span>Avancé</div>
+      </div>
+
+      <div class="turn">
+        <ul class="steps">
+          <li>J'ai cherché au Pilates, le mardi, à votre niveau.</li>
+          <li>Personne le mardi. J'ai regardé tous les autres jours.</li>
+          <li>Toujours personne à votre niveau.</li>
+        </ul>
+        <p class="msg-bot"><span class="sr-only">Ex Aequo : </span>Personne à votre niveau en Pilates. J'ai regardé tous les jours, pas seulement celui que vous vouliez.</p>
+        <p class="msg-bot"><span class="sr-only">Ex Aequo : </span>Je peux enregistrer votre demande et vous prévenir si quelqu'un s'inscrit. Il me faudra une adresse pour vous joindre.</p>
+      </div>
+
+    </section>
+  </main>
+  <!-- Les trois satellites live : hors du flux visuel, hors des reperes,
+       presents et vides des le premier octet, jamais demontes ni remontes.
+       Le satellite de tour est VIDE AU REPOS : on ecrit d abord, on vide
+       ensuite -- vider puis ecrire dans la meme tache serait un remplacement,
+       et aria-relevant=additions exclut text : le tour ne serait pas annonce.
+       Aucune minuterie ne s interpose depuis la v3.3. -->
+  <div class="sr-only" role="log" aria-relevant="additions" aria-atomic="false"></div>
+  <div class="sr-only" role="status" aria-atomic="true"></div>
+  <div class="sr-only" role="status"></div>
+  <div class="composer-wrap">
+    <form>
+      <label class="sr-only" for="c1">Votre message</label>
+      <textarea id="c1" rows="1" placeholder="Écrivez votre réponse…"></textarea>
+      <button class="send" type="submit" disabled aria-label="Envoyer">↑</button>
+    </form>
+  </div>
+</div>
+
+<div class="wrong">
+  <p><b>La phrase que la v2 écrivait ici était fausse, et c'est le défaut le plus grave que la v3 corrige.</b></p>
+  <p style="margin-top:.5rem">Elle disait : <s>« Personne ne fait de Pilates dans le vivier. Pas à un autre niveau, pas un autre jour : personne. »</s> — <b>Sarah Andre fait du Pilates.</b> Elle est débutante. La v1 s'en tirait parce que FR-7 autorisait l'élargissement de niveau et que le refus était donc réellement total ; sans FR-7, la phrase est un mensonge dans le parcours dont la thèse entière est que le bot ne ment pas.</p>
+  <p style="margin-top:.5rem">La v3 dit <b>« personne à votre niveau »</b>, et ajoute ce qu'elle a fait pour en arriver là.</p>
+</div>
+
+<div class="note">
+  <div><b>La mauvaise nouvelle arrive en premier, sans coussin et sans excuse.</b> Le bot énonce le fait, puis ce qu'il propose — jamais l'inverse. Aucun nom, aucun sport de substitution, aucune formule d'excuse.</div>
+  <div><b>Et surtout : aucune proposition de descendre d'un cran.</b> Le niveau ne se négocie à aucune étape, y compris quand ce serait la seule façon de ne pas repartir les mains vides. C'est ce refus qui coûte les <b>3,1 points</b> — le résidu passe de 3,0 % à 6,1 % — et le PRD les assume : ils correspondent au droit de proposer une débutante à quelqu'un qui ne l'est pas.</div>
+  <div><b>Les lignes d'étape sont la preuve du travail.</b> « J'ai regardé tous les autres jours » n'est pas une consolation : c'est vérifiable dans la trace au-dessus. Sans elle, l'affirmation ne vaudrait rien.</div>
+</div>
+
+<p class="tag">L'autre vide — le sport que le vivier ne connaît pas</p>
+
+<div class="frame">
+  <div class="bar"><i></i><i></i><i></i><div class="url">exaequo.fr</div></div>
+  <main>
+    <section class="column" aria-label="Conversation">
+      <h1 class="sr-only">Conversation avec Ex Aequo</h1>
+      <div class="turn">
+        <div class="msg-user"><span class="sr-only">Vous : </span>et au squash, quelqu'un ?</div>
+      </div>
+      <div class="turn">
+        <ul class="steps">
+          <li>J'ai cherché au squash.</li>
+        </ul>
+        <p class="msg-bot"><span class="sr-only">Ex Aequo : </span>Je n'ai encore personne en squash. J'ai cherché, il n'y a rien à ce nom.</p>
+        <p class="msg-bot"><span class="sr-only">Ex Aequo : </span>Je peux enregistrer cette demande aussi, et vous prévenir.</p>
+      </div>
+    </section>
+  </main>
+  <!-- Les trois satellites live : hors du flux visuel, hors des reperes,
+       presents et vides des le premier octet, jamais demontes ni remontes.
+       Le satellite de tour est VIDE AU REPOS : on ecrit d abord, on vide
+       ensuite -- vider puis ecrire dans la meme tache serait un remplacement,
+       et aria-relevant=additions exclut text : le tour ne serait pas annonce.
+       Aucune minuterie ne s interpose depuis la v3.3. -->
+  <div class="sr-only" role="log" aria-relevant="additions" aria-atomic="false"></div>
+  <div class="sr-only" role="status" aria-atomic="true"></div>
+  <div class="sr-only" role="status"></div>
+  <div class="composer-wrap">
+    <form>
+      <label class="sr-only" for="c2">Votre message</label>
+      <textarea id="c2" rows="1" placeholder="Écrivez votre réponse…"></textarea>
+      <button class="send" type="submit" disabled aria-label="Envoyer">↑</button>
+    </form>
+  </div>
+</div>
+
+<div class="note">
+  <div><b>Ce n'est plus un refus, et plus une réponse avant recherche.</b> La v2 disait « le squash ne fait pas partie des onze sports que je connais, je ne vais pas chercher pour rien » — FR-2 l'interdit désormais nommément : la liste des sports est <b>ouverte</b>, et un sport inconnu est un sport <b>vide</b>. Le bot cherche, ne trouve rien, et le dit.</div>
+  <div><b>Deux vides, deux phrases différentes.</b> « Personne à votre niveau » suppose que le sport existe ; « je n'ai encore personne en squash » dit que c'est le sport lui-même qui est neuf. Confondre les deux ferait mentir la première.</div>
+  <div><b>Et le bot ne dit pas qu'elle fonde le sport.</b> Elle cherchait un partenaire, pas un titre : le produit ne transforme pas un échec en distinction.</div>
+</div>
+
+<p class="tag">Le climax — la conversation qui n'a rien donné rend quand même le vivier moins vide</p>
+
+<div class="frame">
+  <div class="bar"><i></i><i></i><i></i><div class="url">exaequo.fr</div></div>
+  <main>
+    <section class="column" aria-label="Conversation">
+      <h1 class="sr-only">Conversation avec Ex Aequo</h1>
+      <div class="turn">
+        <p class="msg-bot"><span class="sr-only">Ex Aequo : </span>C'est enregistré. Je la garde soixante jours ; si personne ne s'inscrit d'ici là, je vous le dirai et vous pourrez la reconduire.</p>
+        <div class="alert-block" role="group" aria-label="Votre alerte">
+          <p class="name">Pilates — avancé</p>
+          <p class="meta">Mardi, et tout autre jour</p>
+          <p class="meta">Posée le 27 août · expire le 26 octobre</p>
+          <button type="button">Annuler cette alerte</button>
+        </div>
+      </div>
+      <div class="turn">
+        <p class="msg-bot"><span class="sr-only">Ex Aequo : </span>Vous êtes maintenant dans le vivier — l'ensemble des profils parmi lesquels je cherche.</p>
+        <p class="msg-bot"><span class="sr-only">Ex Aequo : </span>Si quelqu'un cherche un partenaire de Pilates à votre niveau, il vous trouvera.</p>
+        <p class="msg-bot"><span class="sr-only">Ex Aequo : </span>Dites-le-moi si vous voulez en sortir, je vous retire tout de suite.</p>
+      </div>
+    </section>
+  </main>
+  <!-- Les trois satellites live : hors du flux visuel, hors des reperes,
+       presents et vides des le premier octet, jamais demontes ni remontes.
+       Le satellite de tour est VIDE AU REPOS : on ecrit d abord, on vide
+       ensuite -- vider puis ecrire dans la meme tache serait un remplacement,
+       et aria-relevant=additions exclut text : le tour ne serait pas annonce.
+       Aucune minuterie ne s interpose depuis la v3.3. -->
+  <div class="sr-only" role="log" aria-relevant="additions" aria-atomic="false"></div>
+  <div class="sr-only" role="status" aria-atomic="true"></div>
+  <div class="sr-only" role="status"></div>
+  <div class="composer-wrap">
+    <form>
+      <label class="sr-only" for="c3">Votre message</label>
+      <textarea id="c3" rows="1" placeholder="Écrivez votre message…"></textarea>
+      <button class="send" type="submit" disabled aria-label="Envoyer">↑</button>
+    </form>
+  </div>
+</div>
+
+<div class="note">
+  <div><b>Le conditionnel n'est pas une précaution de style.</b> « Si quelqu'un cherche » — le produit sait qu'il n'y a personne aujourd'hui, et promettre au futur serait la première phrase malhonnête du parcours conçu pour prouver son honnêteté.</div>
+  <div><b>Le bloc d'alerte porte son annulation</b>, ce qui en fait un composant distinct du récapitulatif de rencontre, lequel est non interactif. Il dit ses soixante jours à la pose, et sa date d'expiration est écrite : une alerte qui expirerait en silence serait un abandon déguisé.</div>
+  <div><b>Le droit de sortie est énoncé sans qu'on le demande.</b> L'utilisateur inscrit entre au vivier par une simple phrase du bot ; il en obtient la sortie par la même phrase. Il serait absurde que l'injoignable soit mieux traité que l'inscrit.</div>
+  <div class="against"><b>Variante sans alerte.</b> Si Nadia refuse, le bot n'insiste pas, ne redemande pas de compte, et <b>ne lui annonce pas qu'elle rejoint le vivier</b> : un visiteur sans compte n'y entre pas. Une version antérieure le lui disait quand même — une phrase fausse, exactement là où elle coûtait le plus cher.</div>
+</div>
+
+</body>
+</html>

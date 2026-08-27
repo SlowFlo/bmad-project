@@ -1,0 +1,232 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ex Aequo — La demande de niveau (3 anatomies)</title>
+<style>
+/* ============================================================
+   OUTIL CRÉATIF — v3, le nœud du niveau
+   PRD v2 (2026-08-27) retire FR-15 : le niveau n'est plus déduit, il est DÉCLARÉ.
+   FR-2 : les trois mots exacts sont pris dans la phrase sans rien demander ;
+          toute autre formulation ouvre les trois choix, motif attaché ;
+          un refus est accepté et produit un « niveau inconnu ».
+   Le produit interdit le formulaire déguisé. Trois anatomies possibles.
+
+   Jetons repris de DESIGN.md v2 à l'identique. border-decorative n'existe plus.
+   CE FICHIER EST UN SUPPORT DE DÉCISION, PAS UNE SPINE. Rien ici n'est arrêté.
+   ============================================================ */
+:root{
+  --surface-base:#0B1220; --surface-raised:#111C2E; --surface-raised-hover:#1E314E;
+  --surface-overlay:#18263C; --surface-user:#1B2C46;
+  --ink-primary:#E8EDF5; --ink-secondary:#94A3B8; --ink-disabled:#55677F;
+  --ink-on-accent:#04241C; --accent:#2DD4A7;
+  --border-interactive:#6B82A6; --border-strong:#8AA0C4;
+  --focus-ring:#7DD3FC;
+  --r-sm:8px; --r-md:12px; --r-lg:18px; --r-full:9999px;
+  --thread:45rem; --target:48px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#060A12;color:var(--ink-primary);
+  font-family:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;
+  padding:2.5rem 1rem;display:flex;flex-direction:column;align-items:center;gap:1rem}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;
+  clip:rect(0 0 0 0);white-space:nowrap;border:0}
+
+h1{font-size:1.75rem;font-weight:600;line-height:1.2;letter-spacing:-.02em;text-align:center}
+.intro{color:var(--ink-secondary);font-size:.9375rem;line-height:1.6;max-width:54rem;text-align:center}
+.intro b{color:var(--ink-primary);font-weight:600}
+.tag{font-size:.8125rem;font-weight:500;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--ink-secondary);margin-top:1.5rem}
+.verdict{max-width:54rem;display:grid;gap:.5rem;margin-top:.25rem}
+.verdict div{font-size:.875rem;line-height:1.5;color:var(--ink-secondary);
+  padding-left:1.1rem;position:relative}
+.verdict div::before{content:"";position:absolute;left:0;top:.5rem;width:6px;height:6px;
+  border-radius:50%;background:var(--accent)}
+.verdict .against::before{background:var(--ink-disabled)}
+.verdict b{color:var(--ink-primary);font-weight:600}
+
+/* --- cadre navigateur PC (décor, hors produit) --- */
+.frame{width:100%;max-width:70rem;background:var(--surface-base);
+  border:1px solid var(--border-interactive);border-radius:12px;overflow:hidden;
+  display:flex;flex-direction:column}
+.bar{flex:none;display:flex;align-items:center;gap:.5rem;padding:.5rem .875rem;
+  border-bottom:1px solid var(--border-interactive);background:#080E1A}
+.bar i{width:10px;height:10px;border-radius:50%;background:var(--border-interactive);display:block}
+.url{margin-left:.75rem;flex:1;max-width:21rem;border:1px solid var(--border-interactive);
+  border-radius:var(--r-full);padding:.25rem .875rem;font-size:.75rem;color:var(--ink-secondary)}
+
+/* --- le produit --- */
+main{flex:1;display:flex;justify-content:center;padding:2rem 2rem 0}
+.column{width:100%;max-width:var(--thread)}
+.turn{margin-bottom:2rem}
+.msg-bot{font-size:1.0625rem;line-height:1.6;margin-bottom:1.5rem}
+.msg-bot + .msg-bot{margin-top:-.75rem}
+.msg-user{background:var(--surface-user);border-radius:var(--r-lg);
+  padding:12px 16px;font-size:1.0625rem;line-height:1.6;max-width:80%;
+  margin-left:auto;width:fit-content;margin-bottom:1.5rem}
+
+/* --- le bloc de choix, anatomie héritée de auth-block / agenda-choice --- */
+.choice{background:var(--surface-raised);border:1px solid var(--border-interactive);
+  border-radius:var(--r-md);padding:16px;display:flex;gap:12px;flex-wrap:wrap}
+.choice.stacked{flex-direction:column}
+.opt{background:transparent;border:1px solid var(--border-interactive);
+  border-radius:var(--r-sm);color:var(--ink-primary);
+  font-family:inherit;font-size:.8125rem;font-weight:500;letter-spacing:.02em;
+  padding:12px 24px;min-height:var(--target);cursor:pointer;text-align:left;flex:1;
+  min-width:9rem}
+.opt:hover{background:var(--surface-raised-hover);border-color:var(--border-strong)}
+.opt:focus-visible{outline:3px solid var(--focus-ring);outline-offset:2px}
+.opt .word{display:block;font-size:1.0625rem;font-weight:600;line-height:1.3;letter-spacing:0}
+.opt .fact{display:block;font-size:.875rem;font-weight:400;line-height:1.45;
+  letter-spacing:0;color:var(--ink-secondary);margin-top:6px}
+.exit{background:transparent;border:1px solid var(--border-interactive);
+  border-radius:var(--r-sm);color:var(--ink-primary);font-family:inherit;
+  font-size:.8125rem;font-weight:500;letter-spacing:.02em;padding:12px 24px;
+  min-height:var(--target);cursor:pointer;margin-top:12px;width:100%}
+.exit:hover{background:var(--surface-raised-hover);border-color:var(--border-strong)}
+.exit:focus-visible{outline:3px solid var(--focus-ring);outline-offset:2px}
+
+/* --- zone de saisie ancrée --- */
+.composer-wrap{flex:none;padding:1.5rem 2rem 1.75rem;display:flex;justify-content:center}
+.composer{width:100%;max-width:var(--thread);background:var(--surface-overlay);
+  border:1px solid var(--border-interactive);border-radius:var(--r-lg);
+  min-height:var(--target);display:flex;align-items:center;gap:.75rem;padding:0 .75rem 0 1rem}
+.composer p{flex:1;color:var(--ink-secondary);font-size:1.0625rem;line-height:1.6;padding:12px 0}
+.send{flex:none;background:var(--surface-overlay);border:1px solid var(--border-interactive);
+  color:var(--ink-disabled);border-radius:var(--r-sm);width:40px;height:40px;
+  font-size:1rem;cursor:not-allowed}
+
+/* --- panneau de détail --- */
+.detail{width:100%;max-width:70rem;background:var(--surface-base);
+  border:1px solid var(--border-interactive);border-radius:12px;padding:2rem}
+.detail .column{margin:0 auto}
+.unknown{font-style:italic;color:var(--ink-secondary);font-size:.875rem;line-height:1.45}
+.recap{background:var(--surface-raised);border:1px solid var(--border-interactive);
+  border-radius:var(--r-md);padding:16px;display:grid;gap:8px}
+.recap .name{font-size:1.0625rem;font-weight:600;line-height:1.3}
+.recap .meta{font-size:.875rem;line-height:1.45;color:var(--ink-secondary)}
+
+@media (max-width:49em){
+  main{padding:1rem 1rem 0}
+  .composer-wrap{padding:1rem}
+  .opt{flex:1 1 100%}
+}
+</style>
+</head>
+<body>
+
+<h1>La demande de niveau — trois anatomies</h1>
+<p class="intro">Le PRD v2 retire FR-15 : le niveau est désormais <b>déclaré</b>. S'il est dans la phrase, rien n'est demandé. Sinon, <b>trois choix s'ouvrent</b>, motif attaché. Or ce produit tient sur une règle : <b>« il n'affiche pas un formulaire déguisé »</b>. Voici trois façons d'honorer les deux à la fois. Le refus, que FR-2 autorise, est traité en dernier panneau.</p>
+
+<!-- ============================================================ A ============ -->
+<p class="tag">Anatomie A — le bloc de pairs</p>
+<div class="frame">
+  <div class="bar"><i></i><i></i><i></i><div class="url">exaequo.fr</div></div>
+  <main>
+    <div class="column">
+      <div class="turn">
+        <div class="msg-user"><span class="sr-only">Vous : </span>je cherche quelqu'un pour jouer au tennis le mardi</div>
+      </div>
+      <div class="turn">
+        <p class="msg-bot"><span class="sr-only">Ex Aequo : </span>Tennis, le mardi. Il me manque votre niveau — c'est ce qui permettra de vous trouver quelqu'un d'équivalent.</p>
+        <div class="choice">
+          <button class="opt" type="button"><span class="word">Débutant</span></button>
+          <button class="opt" type="button"><span class="word">Intermédiaire</span></button>
+          <button class="opt" type="button"><span class="word">Avancé</span></button>
+        </div>
+      </div>
+    </div>
+  </main>
+  <div class="composer-wrap">
+    <div class="composer"><p>Écrivez votre réponse…</p><button class="send" type="button" disabled aria-label="Envoyer">↑</button></div>
+  </div>
+</div>
+<div class="verdict">
+  <div><b>Pour.</b> Continuité stricte avec <code>auth-block</code> et <code>agenda-choice</code> : motif en prose au-dessus, options au même rang, aucune préréglée. Rien de nouveau à apprendre, un tour, deux lignes.</div>
+  <div class="against"><b>Contre.</b> Rien ne résiste à la sur-évaluation, que le PRD assume mais ne combat plus : <b>Intermédiaire</b> est au centre et devient le choix par défaut visuel. Et le refus de FR-2 n'a aucun foyer visible.</div>
+</div>
+
+<!-- ============================================================ B ============ -->
+<p class="tag">Anatomie B — les trois mots ancrés dans des faits</p>
+<div class="frame">
+  <div class="bar"><i></i><i></i><i></i><div class="url">exaequo.fr</div></div>
+  <main>
+    <div class="column">
+      <div class="turn">
+        <div class="msg-user"><span class="sr-only">Vous : </span>je cherche quelqu'un pour jouer au tennis le mardi, j'ai un niveau correct</div>
+      </div>
+      <div class="turn">
+        <p class="msg-bot"><span class="sr-only">Ex Aequo : </span>Tennis, le mardi. « Correct » ne me dit pas où vous situer, et je préfère vous le demander plutôt que de le deviner — c'est ce qui permettra de vous trouver quelqu'un d'équivalent.</p>
+        <div class="choice stacked">
+          <button class="opt" type="button"><span class="word">Débutant</span><span class="fact">Je débute, ou je reprends après une longue coupure.</span></button>
+          <button class="opt" type="button"><span class="word">Intermédiaire</span><span class="fact">Je joue régulièrement, j'ai mes repères, je tiens un échange.</span></button>
+          <button class="opt" type="button"><span class="word">Avancé</span><span class="fact">Je joue en compétition, ou je m'entraîne pour.</span></button>
+        </div>
+      </div>
+    </div>
+  </main>
+  <div class="composer-wrap">
+    <div class="composer"><p>Écrivez votre réponse…</p><button class="send" type="button" disabled aria-label="Envoyer">↑</button></div>
+  </div>
+</div>
+<div class="verdict">
+  <div><b>Pour.</b> C'est le <b>résidu de FR-15</b> : les faits vérifiables survivent en <i>description</i> au lieu d'être posés en <i>questions</i>. Le tour reste unique — la contrainte SM-C2 (4 tours) est tenue — et la sur-évaluation rencontre une résistance sans qu'on interroge personne.</div>
+  <div><b>Pour.</b> Le bot nomme le mot qu'il n'a pas su interpréter (« correct ») au lieu de faire comme s'il n'avait rien lu. Cohérent avec la grammaire de l'honnêteté.</div>
+  <div class="against"><b>Contre.</b> Le bloc grossit et se rapproche visuellement du formulaire que le produit bannit. Il faut écrire trois libellés <b>par sport</b>, ou en trouver trois assez génériques pour le Pilates comme pour le tennis.</div>
+</div>
+
+<!-- ============================================================ C ============ -->
+<p class="tag">Anatomie C — B, plus la sortie explicite</p>
+<div class="frame">
+  <div class="bar"><i></i><i></i><i></i><div class="url">exaequo.fr</div></div>
+  <main>
+    <div class="column">
+      <div class="turn">
+        <p class="msg-bot"><span class="sr-only">Ex Aequo : </span>Tennis, le mardi. « Correct » ne me dit pas où vous situer, et je préfère vous le demander plutôt que de le deviner — c'est ce qui permettra de vous trouver quelqu'un d'équivalent.</p>
+        <div class="choice stacked">
+          <button class="opt" type="button"><span class="word">Débutant</span><span class="fact">Je débute, ou je reprends après une longue coupure.</span></button>
+          <button class="opt" type="button"><span class="word">Intermédiaire</span><span class="fact">Je joue régulièrement, j'ai mes repères, je tiens un échange.</span></button>
+          <button class="opt" type="button"><span class="word">Avancé</span><span class="fact">Je joue en compétition, ou je m'entraîne pour.</span></button>
+          <button class="exit" type="button">Je préfère ne pas le dire</button>
+        </div>
+      </div>
+    </div>
+  </main>
+  <div class="composer-wrap">
+    <div class="composer"><p>Écrivez votre réponse…</p><button class="send" type="button" disabled aria-label="Envoyer">↑</button></div>
+  </div>
+</div>
+<div class="verdict">
+  <div><b>Pour.</b> FR-2 <i>autorise</i> le refus et exige que « le bot dise ce que ça coûte avant que la personne tranche ». En A et B, le refus n'existe qu'en le tapant : il est <b>légal mais introuvable</b>, et la phrase de coût n'a nulle part où s'écrire.</div>
+  <div class="against"><b>Contre.</b> Le PRD note lui-même qu'un <i>niveau inconnu</i> rend le profil <b>inerte des deux côtés</b> — ni trouvable, ni capable de chercher. Le rendre visible, c'est mettre un cul-de-sac à un clic, au même rang typographique que les trois issues qui marchent.</div>
+</div>
+
+<!-- ============================================================ détail ======== -->
+<p class="tag">Détail — ce que le refus déclenche, et ce qu'il laisse derrière</p>
+<div class="detail">
+  <div class="column">
+    <div class="turn">
+      <p class="msg-bot"><span class="sr-only">Ex Aequo : </span>Je peux ne pas le noter. Sachez seulement ce que ça change : sans niveau, je ne peux ni vous proposer quelqu'un, ni vous proposer aux autres — l'appariement ne repose que là-dessus. Vous pourrez me le dire plus tard, à tout moment.</p>
+      <div class="choice">
+        <button class="opt" type="button"><span class="word">Le renseigner</span></button>
+        <button class="opt" type="button"><span class="word">Laisser vide</span></button>
+      </div>
+    </div>
+    <div class="turn">
+      <p class="msg-bot"><span class="sr-only">Ex Aequo : </span>Et voici l'état de votre fiche, si vous la laissez ainsi :</p>
+      <div class="recap">
+        <div class="name">Tennis — mardi</div>
+        <div class="meta">Niveau : <span class="unknown">je ne sais pas encore</span></div>
+        <div class="meta">Vous n'apparaissez dans aucune recherche tant que ce mot manque.</div>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="verdict">
+  <div><b>Ce que le détail montre.</b> Le composant <code>unknown-value</code> — italique, <code>ink-secondary</code>, pleine lisibilité — a déjà exactement la grammaire qu'il faut pour porter un niveau absent. Et la règle de voix « l'inconnu se conjugue » donne la formule sans qu'on l'invente : <b>« je ne sais pas encore »</b>, jamais « non renseigné ».</div>
+  <div class="against"><b>Question restée ouverte.</b> Ce second tour de confirmation coûte un tour à SM-C2, qui vient d'être abaissée de 5 à 4. Il peut aussi se replier en une seule phrase sans choix, le refus se confirmant à la saisie suivante.</div>
+</div>
+
+</body>
+</html>

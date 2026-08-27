@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ex Aequo — La déclaration du niveau</title>
+<style>
+/* ============================================================
+   ÉCRAN 2 — LA DÉCLARATION DU NIVEAU                            v3 · 2026-08-27
+   NOUVEAU en v3. Le PRD v2 retire FR-15 : le niveau n'est plus déduit de faits
+   vérifiables, il est DÉCLARÉ. Cet écran est le foyer de ce renversement.
+
+   Sections de spine qui gouvernent cet écran :
+     DESIGN.md     → Colors (+ Cibles de contraste, 3 paires ajoutées en v3) ·
+                     Typography · Components (level-choice) · Do's and Don'ts
+     EXPERIENCE.md → Voice and Tone (libellés contractuels) · Component Patterns
+                     (bloc de déclaration du niveau) · State Patterns (niveau pris
+                     dans la phrase, déclaration du niveau, refus du niveau) ·
+                     Key Flows, parcours 2 étape 2
+
+   LA SPINE L'EMPORTE SUR CETTE MAQUETTE EN CAS DE CONFLIT.
+   ============================================================ */
+:root{
+  --surface-base:#0B1220; --surface-raised:#111C2E; --surface-raised-hover:#1E314E;
+  --surface-overlay:#18263C; --surface-user:#1B2C46;
+  --ink-primary:#E8EDF5; --ink-secondary:#94A3B8; --ink-disabled:#55677F;
+  --accent:#2DD4A7;
+  --border-interactive:#6B82A6; --border-strong:#8AA0C4; --focus-ring:#7DD3FC;
+  --r-sm:8px; --r-md:12px; --r-lg:18px; --r-full:9999px;
+  --thread:45rem; --target:48px; --gutter:32px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#060A12;color:var(--ink-primary);
+  font-family:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;
+  padding:2.5rem 1rem;display:flex;flex-direction:column;align-items:center;gap:1.5rem}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;
+  clip:rect(0 0 0 0);white-space:nowrap;border:0}
+.caption{color:var(--ink-secondary);font-size:.875rem;line-height:1.45;max-width:52rem;text-align:center}
+.caption b{color:var(--ink-primary);font-weight:600}
+.tag{font-size:.8125rem;font-weight:500;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--ink-secondary);margin-top:1rem}
+
+.frame{width:100%;max-width:74rem;background:var(--surface-base);
+  border:1px solid var(--border-interactive);border-radius:12px;overflow:hidden;
+  display:flex;flex-direction:column}
+.bar{flex:none;display:flex;align-items:center;gap:.5rem;padding:.5rem .875rem;
+  border-bottom:1px solid var(--border-interactive);background:#080E1A}
+.bar i{width:10px;height:10px;border-radius:50%;background:var(--border-interactive);display:block}
+.url{margin-left:.75rem;flex:1;max-width:21rem;border:1px solid var(--border-interactive);
+  border-radius:var(--r-full);padding:.25rem .875rem;font-size:.75rem;color:var(--ink-secondary)}
+
+main{flex:1;display:flex;justify-content:center;padding:2rem var(--gutter) 0}
+.column{width:100%;max-width:var(--thread)}
+.turn{margin-bottom:2rem}
+.msg-bot{font-size:1.0625rem;line-height:1.6;margin-bottom:1.5rem}
+.msg-user{background:var(--surface-user);border-radius:var(--r-lg);padding:12px 16px;
+  font-size:1.0625rem;line-height:1.6;max-width:80%;margin-left:auto;width:fit-content;
+  margin-bottom:1.5rem}
+
+/* --- components.level-choice --- */
+.level-choice{background:var(--surface-raised);border:1px solid var(--border-interactive);
+  border-radius:var(--r-md);padding:16px;display:flex;flex-direction:column;gap:12px}
+.opt{background:transparent;border:1px solid var(--border-interactive);
+  border-radius:var(--r-sm);color:var(--ink-primary);font-family:inherit;
+  padding:12px 24px;min-height:var(--target);cursor:pointer;text-align:left;display:block;width:100%}
+.opt:hover{background:var(--surface-raised-hover);border-color:var(--border-strong)}
+.opt:focus-visible{outline:3px solid var(--focus-ring);outline-offset:2px}
+.opt .word{display:block;font-size:1.0625rem;font-weight:600;line-height:1.3}
+.opt .fact{display:block;font-size:.875rem;font-weight:400;line-height:1.45;
+  color:var(--ink-secondary);margin-top:4px}
+/* états démontrés en statique, pour la lecture de la maquette */
+.opt.is-hover{background:var(--surface-raised-hover);border-color:var(--border-strong)}
+.opt.is-focus{outline:3px solid var(--focus-ring);outline-offset:2px}
+
+.recap{background:var(--surface-raised);border:1px solid var(--border-interactive);
+  border-radius:var(--r-md);padding:16px;display:grid;gap:8px}
+.recap .name{font-size:1.0625rem;font-weight:600;line-height:1.3}
+.recap .meta{font-size:.875rem;line-height:1.45;color:var(--ink-secondary)}
+.unknown{font-style:italic}
+
+.composer-wrap{flex:none;padding:1.5rem var(--gutter) 1.75rem;display:flex;justify-content:center}
+form{width:100%;max-width:var(--thread);background:var(--surface-overlay);
+  border:1px solid var(--border-interactive);border-radius:var(--r-lg);min-height:var(--target);
+  display:flex;align-items:flex-end;gap:.75rem;padding:.375rem .375rem .375rem 1rem}
+textarea{flex:1;background:transparent;border:0;color:var(--ink-primary);resize:none;
+  font-family:inherit;font-size:1.0625rem;line-height:1.6;padding:.6875rem 0;
+  min-height:calc(var(--target) - .75rem)}
+textarea::placeholder{color:var(--ink-secondary)}
+form:focus-within{outline:3px solid var(--focus-ring);outline-offset:2px}
+textarea:focus{outline:none}
+.send{flex:none;width:var(--target);height:var(--target);border-radius:var(--r-sm);
+  background:var(--surface-overlay);border:1px solid var(--border-interactive);
+  color:var(--ink-disabled);font-size:1.125rem;cursor:not-allowed}
+
+.note{max-width:52rem;display:grid;gap:.5rem}
+.note div{font-size:.875rem;line-height:1.5;color:var(--ink-secondary);
+  padding-left:1.1rem;position:relative}
+.note div::before{content:"";position:absolute;left:0;top:.5rem;width:6px;height:6px;
+  border-radius:50%;background:var(--accent)}
+.note b{color:var(--ink-primary);font-weight:600}
+
+@media (max-width:49em){
+  main{padding:1rem 1rem 0}
+  .composer-wrap{padding:1rem}
+}
+</style>
+</head>
+<body>
+
+<p class="tag">Écran 2 · v3 — la déclaration du niveau (chemin long)</p>
+<p class="caption">La demande se complète, <b>et le niveau n'était pas dans la phrase</b>. C'est le seul bloc de choix de l'avant-recherche, et il n'apparaît jamais pendant ni après une recherche.</p>
+
+<div class="frame">
+  <div class="bar"><i></i><i></i><i></i><div class="url">exaequo.fr</div></div>
+  <main>
+    <div class="column">
+      <div class="turn">
+        <div class="msg-user"><span class="sr-only">Vous : </span>je cherche quelqu'un pour faire du Pilates le mardi, j'ai un niveau correct</div>
+      </div>
+      <div class="turn">
+        <p class="msg-bot"><span class="sr-only">Ex Aequo : </span>Pilates, le mardi. « Correct » ne me dit pas où vous situer, et je préfère vous le demander plutôt que de le deviner — c'est ce qui permettra de vous trouver quelqu'un d'équivalent.</p>
+        <div class="level-choice" role="group" aria-label="Votre niveau">
+          <button class="opt" type="button">
+            <span class="word">Débutant</span>
+            <span class="fact">Je débute, ou je reprends après une longue coupure.</span>
+          </button>
+          <button class="opt is-hover" type="button">
+            <span class="word">Intermédiaire</span>
+            <span class="fact">Je pratique régulièrement depuis un moment.</span>
+          </button>
+          <button class="opt is-focus" type="button">
+            <span class="word">Avancé</span>
+            <span class="fact">Je suis en compétition, ou je m'entraîne pour.</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </main>
+  <div class="composer-wrap">
+    <form>
+      <label class="sr-only" for="c1">Votre message</label>
+      <textarea id="c1" rows="1" placeholder="…ou écrivez-le"></textarea>
+      <button class="send" type="submit" disabled aria-label="Envoyer">↑</button>
+    </form>
+  </div>
+</div>
+
+<div class="note">
+  <div><b>Empilés, jamais alignés.</b> Trois options côte à côte se lisent comme une échelle horizontale dont le centre est le défaut — et le centre est exactement là où tombe la sur-évaluation que la recherche mesure à 0,5–1,0 point. L'empilement retire au mot du milieu sa position privilégiée.</div>
+  <div><b>Le mot, puis le fait.</b> C'est le résidu de FR-15 : les faits vérifiables que le PRD faisait poser en <i>questions</i> survivent en <i>description</i>. Les libellés sont <b>génériques et le resteront</b> — la liste des sports est ouverte, un libellé propre au tennis n'existerait pas pour un sport fondé demain. Ils sont formulés sur l'ancienneté et la fréquence, <b>jamais sur le geste</b>.</div>
+  <div><b>Aucun quatrième bouton.</b> Le refus qu'autorise FR-2 s'écrit dans le champ, il ne se clique pas : un profil de niveau inconnu est inerte des deux côtés, et le produit ne met pas un cul-de-sac au même rang que les trois issues qui marchent. Le champ reste actif, et le bot lit ce qu'on lui écrit.</div>
+  <div><b>Les trois états sont montrés en même temps</b> — repos, survol, focus clavier. La ligne de fait reste lisible au survol : <code>ink-secondary / surface-raised-hover = 5,10:1</code>, paire ajoutée à la table de contraste en v3 précisément pour ce composant.</div>
+</div>
+
+<p class="tag">Le chemin court — le mot était dans la phrase</p>
+
+<div class="frame">
+  <div class="bar"><i></i><i></i><i></i><div class="url">exaequo.fr</div></div>
+  <main>
+    <div class="column">
+      <div class="turn">
+        <div class="msg-user"><span class="sr-only">Vous : </span>je veux jouer au tennis mardi aprem, je suis intermédiaire</div>
+      </div>
+      <div class="turn">
+        <p class="msg-bot"><span class="sr-only">Ex Aequo : </span>Tennis, mardi, intermédiaire. Je cherche.</p>
+      </div>
+    </div>
+  </main>
+  <div class="composer-wrap">
+    <form>
+      <label class="sr-only" for="c2">Votre message</label>
+      <textarea id="c2" rows="1" placeholder="Écrivez votre réponse…"></textarea>
+      <button class="send" type="submit" disabled aria-label="Envoyer">↑</button>
+    </form>
+  </div>
+</div>
+
+<div class="note">
+  <div><b>Zéro tour consommé.</b> L'un des trois mots exacts figure dans la phrase : le bot le retient sans rien demander, et <b>le répète</b>. La répétition n'est pas une politesse — c'est la seule occasion qu'aura la personne de corriger la donnée qui décide de tout son appariement. Aucun bloc n'apparaît, aucun commentaire, aucune félicitation.</div>
+  <div><b>Et jamais d'interprétation.</b> « Bon niveau », « correct », « ça va » n'ouvrent pas ce chemin, même quand le sens paraît évident : le LLM n'a pas le droit d'improviser sur cette donnée, c'est elle qui structure l'appariement.</div>
+</div>
+
+<p class="tag">Le refus — écrit, jamais cliqué</p>
+
+<div class="frame">
+  <div class="bar"><i></i><i></i><i></i><div class="url">exaequo.fr</div></div>
+  <main>
+    <div class="column">
+      <div class="turn">
+        <div class="msg-user"><span class="sr-only">Vous : </span>je préfère ne pas le dire</div>
+      </div>
+      <div class="turn">
+        <p class="msg-bot"><span class="sr-only">Ex Aequo : </span>Je peux ne pas le noter. Sachez seulement ce que ça change : sans niveau, je ne peux ni vous proposer quelqu'un, ni vous proposer aux autres — l'appariement ne repose que là-dessus. Vous pourrez me le dire plus tard, à tout moment.</p>
+        <div class="recap" role="group" aria-label="Votre fiche">
+          <p class="name">Pilates — mardi</p>
+          <p class="meta">Niveau : <span class="unknown">je ne sais pas encore</span></p>
+          <p class="meta">Vous n'apparaissez dans aucune recherche tant que ce mot manque.</p>
+        </div>
+      </div>
+    </div>
+  </main>
+  <div class="composer-wrap">
+    <form>
+      <label class="sr-only" for="c3">Votre message</label>
+      <textarea id="c3" rows="1" placeholder="Écrivez votre réponse…"></textarea>
+      <button class="send" type="submit" disabled aria-label="Envoyer">↑</button>
+    </form>
+  </div>
+</div>
+
+<div class="note">
+  <div><b>Le seul inconnu du produit dont le coût s'écrit.</b> Les quatre autres — lieu, météo, secteur, heure — sont des trous bénins : le produit continue sans eux. Celui-ci rend le profil inerte des deux côtés, donc la valeur porte, <b>à côté d'elle</b>, la phrase qui dit ce qu'elle empêche. L'italique de <code>unknown-value</code> ne suffirait pas.</div>
+  <div><b>L'inconnu se conjugue.</b> « Je ne sais pas encore », jamais « Niveau non renseigné » — la langue d'un champ vide dans une base, pas celle d'un interlocuteur qui admet une ignorance. Et le bot <b>ne redemande pas</b> : il a dit une fois, la porte reste ouverte.</div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,1044 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Validation PRD : Ex Aequo / Trouve-moi un partenaire</title>
+<style>
+  :root {
+    --bg: #fafaf9;
+    --surface: #ffffff;
+    --border: #e7e5e4;
+    --text: #1c1917;
+    --muted: #78716c;
+
+    --verdict-strong: #16a34a;
+    --verdict-adequate: #65a30d;
+    --verdict-thin: #d97706;
+    --verdict-broken: #dc2626;
+
+    --sev-low: #64748b;
+    --sev-medium: #ca8a04;
+    --sev-high: #ea580c;
+    --sev-critical: #dc2626;
+
+    --grade-exc: #16a34a;
+    --grade-good: #65a30d;
+    --grade-fair: #d97706;
+    --grade-poor: #dc2626;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    font-size: 15px;
+  }
+  .container { max-width: 960px; margin: 0 auto; padding: 32px 24px 64px; }
+
+  header.report-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 24px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 24px;
+  }
+  .title h1 { margin: 0; font-size: 22px; font-weight: 600; letter-spacing: -0.01em; }
+  .title .subtitle { color: var(--muted); font-size: 13px; margin-top: 4px; font-family: ui-monospace, "SF Mono", Menlo, monospace; }
+  .grade {
+    padding: 10px 18px;
+    border-radius: 8px;
+    font-weight: 600;
+    color: white;
+    font-size: 15px;
+    white-space: nowrap;
+  }
+  .grade-excellent { background: var(--grade-exc); }
+  .grade-good { background: var(--grade-good); }
+  .grade-fair { background: var(--grade-fair); }
+  .grade-poor { background: var(--grade-poor); }
+
+  .scope-notice {
+    background: #fffbeb;
+    border: 1px solid #fde68a;
+    border-left: 3px solid var(--grade-fair);
+    border-radius: 8px;
+    padding: 14px 18px;
+    margin-bottom: 20px;
+    font-size: 14px;
+  }
+  .scope-notice p { margin: 0 0 8px; }
+  .scope-notice p:last-child { margin-bottom: 0; }
+
+  .synthesis {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--muted);
+    border-radius: 8px;
+    padding: 18px 22px;
+    margin-bottom: 24px;
+    font-size: 15.5px;
+  }
+  .synthesis p { margin: 0 0 10px; }
+  .synthesis p:last-child { margin-bottom: 0; }
+
+  .dimension-summary {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 10px;
+    margin-bottom: 24px;
+  }
+  .dim-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 14px;
+  }
+  .dim-card .dim-name { font-size: 13px; color: var(--muted); margin-bottom: 6px; }
+  .dim-card .dim-verdict { font-size: 14px; font-weight: 600; }
+
+  section.dimension, section.reviewer-section { margin-bottom: 14px; }
+  section.dimension details, section.reviewer-section details {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  section summary {
+    padding: 14px 20px;
+    cursor: pointer;
+    user-select: none;
+    list-style: none;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  section summary::-webkit-details-marker { display: none; }
+  section summary::before {
+    content: "\25B8";
+    display: inline-block;
+    color: var(--muted);
+    transition: transform 0.15s ease;
+  }
+  section details[open] summary::before { transform: rotate(90deg); }
+  section summary h2 {
+    display: inline;
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+    letter-spacing: -0.005em;
+    flex: 1;
+  }
+  .verdict-pill {
+    font-size: 11px;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: white;
+  }
+  .verdict-strong { background: var(--verdict-strong); }
+  .verdict-adequate { background: var(--verdict-adequate); }
+  .verdict-thin { background: var(--verdict-thin); }
+  .verdict-broken { background: var(--verdict-broken); }
+
+  .dim-body { padding: 4px 20px 18px; }
+  .dim-judgment { color: var(--text); font-size: 14.5px; }
+  .dim-judgment p { margin: 0 0 10px; }
+  .dim-judgment ul { margin: 0 0 10px; padding-left: 20px; }
+  .dim-judgment li { margin-bottom: 6px; }
+
+  .findings-list { padding: 0 20px 4px; }
+  article.finding {
+    padding: 14px 0;
+    border-top: 1px solid var(--border);
+  }
+  article.finding:first-child { border-top: none; }
+  article.finding header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 6px;
+  }
+  .badge {
+    font-size: 10.5px;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    line-height: 1.4;
+  }
+  .badge-sev-low { background: rgba(100, 116, 139, 0.12); color: var(--sev-low); }
+  .badge-sev-medium { background: rgba(202, 138, 4, 0.14); color: var(--sev-medium); }
+  .badge-sev-high { background: rgba(234, 88, 12, 0.14); color: var(--sev-high); }
+  .badge-sev-critical { background: rgba(220, 38, 38, 0.14); color: var(--sev-critical); }
+  .finding-title { margin: 0; font-size: 15px; font-weight: 500; flex: 1; min-width: 200px; }
+  .finding-location { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 12.5px; color: var(--muted); }
+  .finding-note, .finding-fix { margin-top: 6px; font-size: 14px; }
+  .finding-fix strong { color: var(--muted); font-weight: 500; }
+  .sides { margin: 8px 0 0; padding: 0; }
+  .sides dt { font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); font-weight: 600; margin-top: 8px; }
+  .sides dd { margin: 2px 0 0; font-size: 14px; }
+  .tag {
+    display: inline-block;
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 4px;
+    background: rgba(120, 113, 108, 0.12);
+    color: var(--muted);
+    font-weight: 500;
+    margin-right: 6px;
+  }
+  .tag-prd { background: rgba(37, 99, 235, 0.12); color: #2563eb; }
+  .tag-ux { background: rgba(147, 51, 234, 0.12); color: #9333ea; }
+  .tag-arb { background: rgba(217, 119, 6, 0.14); color: #b45309; }
+
+  .mechanical {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px 20px;
+    margin-top: 24px;
+    font-size: 14px;
+  }
+  .mechanical h3 { margin: 0 0 10px; font-size: 14px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
+  .mechanical h4 { margin: 14px 0 6px; font-size: 13.5px; font-weight: 600; }
+  .mechanical ul { margin: 0; padding-left: 20px; }
+  .mechanical li { margin-bottom: 4px; color: var(--text); }
+
+  footer.report-footer {
+    margin-top: 40px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+    font-size: 12px;
+    color: var(--muted);
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  }
+  footer .meta { display: flex; gap: 24px; flex-wrap: wrap; }
+</style>
+</head>
+<body>
+  <div class="container">
+
+    <header class="report-header">
+      <div class="title">
+        <h1>Ex Aequo / Trouve-moi un partenaire — Rapport de validation</h1>
+        <div class="subtitle">documentation/planning-artifacts/prds/prd-bmad-2026-08-26/prd.md · status: draft</div>
+      </div>
+      <div class="grade grade-poor">Poor</div>
+    </header>
+
+    <div class="scope-notice">
+      <p><strong>Relecteurs exécutés.</strong> Deux : le <em>rubric walker qualité</em> (sept dimensions, 30 constats) et la <em>dérive PRD ↔ UX</em> (16 constats). Le relecteur adversarial produit n'a pas été lancé.</p>
+      <p><strong>Comment lire la note.</strong> La formule du gate donne <em>Poor</em> dès qu'un constat critique existe — il y en a cinq. Elle ne dit pas que le PRD est mauvais : <strong>aucune dimension n'est <em>thin</em> ni <em>broken</em></strong>, cinq sont <em>adequate</em> et deux sont <em>strong</em>. La note traduit un risque concentré sur quelques points localisés, pas une faiblesse d'ensemble.</p>
+    </div>
+
+    <div class="synthesis">
+      <p><strong>Qualité intrinsèque du PRD.</strong> Le document tient largement au-dessus de la barre de ses enjeux : une thèse assumée, des décisions prises et <em>justifiées par des chiffres tirés des données réelles</em> (§5.2), des non-objectifs qui font un vrai travail (§8, §9), et une séparation exemplaire du « comment » vers l'addendum. La différenciation revendiquée au §1 n'est pas du théâtre d'innovation : elle est gagnée par une recherche qui a réellement passé le paysage en revue, et le PRD nomme le pari comme un pari, y compris dans son interprétation défavorable. Le relecteur a recalculé l'intégralité des chiffres du PRD contre <code>SportsProfiles.csv</code> — 86 profils, 231 combinaisons, 55 % de vides, 89 % récupérés par l'élargissement du jour, Emma Leroy unique sur Tennis/Mardi/Débutant, Anna/Iris/Tessa exactement les trois Tennis/Intermédiaire : <strong>tous exacts</strong>.</p>
+      <p><strong>Ce qui est à risque</strong> tient en trois points, tous localisés et tous réparables : une conséquence testable est <strong>factuellement fausse</strong> contre le CSV qu'elle invoque (FR-8 / Pilates, vérifié) ; la jouabilité — une section entière — exige une granularité horaire que le PRD exclut explicitement deux fois ailleurs ; et la promesse centrale de UJ-1, « Anna est prévenue », n'est portée par aucune FR, n'a aucun canal, et entre en collision frontale avec le garde-fou le plus structurant du produit (§7, <em>Le bot n'invente rien</em>). Le document est prêt à être découpé en épiques une fois ces trois points tranchés ; il ne l'est pas avant.</p>
+      <p><strong>Dérive vis-à-vis de l'UX.</strong> Le travail UX est <strong>substantiellement fidèle</strong> au PRD. Le glossaire du §3 est tenu à la lettre, la règle « le jour se négocie, le niveau se défend » est reproduite sans glissement, et l'état dominant du produit — 55 % de recherches sans candidat — est réellement traité en chemin nominal et non en cas limite.</p>
+      <p>La dérive dominante n'est pas un dépassement de mandat : c'est une <strong>avance</strong>. L'UX a tranché, presque toujours bien, ce que le PRD avait laissé ouvert — le nom du produit, le ton, la surface principale, le canal de notification, l'heure du rendez-vous — et le PRD, resté en <code>draft</code>, n'a rien rattrapé. Il porte aujourd'hui au moins trois affirmations devenues fausses pendant que les deux spines qui en dérivent sont en <code>final</code>. Le sens de la correction est donc massivement <strong>« le PRD rattrape »</strong> : 11 constats sur 16.</p>
+      <p>Les deux seuls vrais dépassements sont dans les maquettes, et tous deux touchent la contrainte que le PRD qualifie lui-même de la plus structurante : un seuil de température chiffré là où le PRD dit explicitement ne pas l'avoir fixé, et un profil d'amorçage montré en train de confirmer alors que le glossaire dit qu'il « ne répond jamais ». Ce sont les deux constats critiques de la dérive, et ce sont aussi les deux moins coûteux à corriger.</p>
+      <p><strong>Ce sur quoi les deux relecteurs convergent</strong>, sans s'être lus : <strong>le canal de notification</strong> (le memlog l'avait identifié, le PRD ne l'a jamais porté, l'UX a dû l'inventer en hypothèse), <strong>l'heure de la journée</strong> (exclue du périmètre deux fois, exigée par FR-10 et UJ-1, collectée par l'UX), et <strong>les seuils de jouabilité</strong> (non fixés au PRD, chiffrés en dur dans une maquette). Trois trous du PRD que l'aval a comblés seul. C'est le cœur du travail de reprise.</p>
+    </div>
+
+    <h2 style="font-size:15px;text-transform:uppercase;letter-spacing:0.04em;color:var(--muted);margin:0 0 10px">Verdicts par dimension</h2>
+    <div class="dimension-summary">
+      <div class="dim-card">
+        <div class="dim-name">Decision-readiness</div>
+        <div class="dim-verdict" style="color: var(--verdict-adequate)">adequate</div>
+      </div>
+      <div class="dim-card">
+        <div class="dim-name">Substance over theater</div>
+        <div class="dim-verdict" style="color: var(--verdict-adequate)">adequate</div>
+      </div>
+      <div class="dim-card">
+        <div class="dim-name">Strategic coherence</div>
+        <div class="dim-verdict" style="color: var(--verdict-adequate)">adequate</div>
+      </div>
+      <div class="dim-card">
+        <div class="dim-name">Done-ness clarity</div>
+        <div class="dim-verdict" style="color: var(--verdict-adequate)">adequate</div>
+      </div>
+      <div class="dim-card">
+        <div class="dim-name">Scope honesty</div>
+        <div class="dim-verdict" style="color: var(--verdict-strong)">strong</div>
+      </div>
+      <div class="dim-card">
+        <div class="dim-name">Downstream usability</div>
+        <div class="dim-verdict" style="color: var(--verdict-adequate)">adequate</div>
+      </div>
+      <div class="dim-card">
+        <div class="dim-name">Shape fit</div>
+        <div class="dim-verdict" style="color: var(--verdict-strong)">strong</div>
+      </div>
+    </div>
+
+    <h2 style="font-size:15px;text-transform:uppercase;letter-spacing:0.04em;color:var(--muted);margin:0 0 10px">Constats — les deux relecteurs réunis</h2>
+    <div class="dimension-summary">
+      <div class="dim-card">
+        <div class="dim-name">Critiques</div>
+        <div class="dim-verdict" style="color: var(--sev-critical)">5 &nbsp;<span style="font-weight:400;color:var(--muted);font-size:12px">3 rubric · 2 dérive</span></div>
+      </div>
+      <div class="dim-card">
+        <div class="dim-name">Élevés</div>
+        <div class="dim-verdict" style="color: var(--sev-high)">15 &nbsp;<span style="font-weight:400;color:var(--muted);font-size:12px">9 rubric · 6 dérive</span></div>
+      </div>
+      <div class="dim-card">
+        <div class="dim-name">Moyens</div>
+        <div class="dim-verdict" style="color: var(--sev-medium)">19 &nbsp;<span style="font-weight:400;color:var(--muted);font-size:12px">13 rubric · 6 dérive</span></div>
+      </div>
+      <div class="dim-card">
+        <div class="dim-name">Faibles</div>
+        <div class="dim-verdict" style="color: var(--sev-low)">7 &nbsp;<span style="font-weight:400;color:var(--muted);font-size:12px">5 rubric · 2 dérive</span></div>
+      </div>
+      <div class="dim-card">
+        <div class="dim-name">Total</div>
+        <div class="dim-verdict">46</div>
+      </div>
+      <div class="dim-card">
+        <div class="dim-name">Chiffres du PRD vérifiés</div>
+        <div class="dim-verdict" style="color: var(--verdict-strong)">tous exacts</div>
+      </div>
+      <div class="dim-card">
+        <div class="dim-name">Index des hypothèses §12</div>
+        <div class="dim-verdict" style="color: var(--verdict-strong)">aller-retour complet</div>
+      </div>
+      <div class="dim-card">
+        <div class="dim-name">Identifiants FR / UJ / SM</div>
+        <div class="dim-verdict" style="color: var(--verdict-strong)">contigus, sans trou</div>
+      </div>
+    </div>
+
+    <section class="dimension">
+      <details open>
+        <summary>
+          <h2>Les 5 constats critiques — à trancher avant tout découpage en épiques</h2>
+          <span class="verdict-pill verdict-broken">5</span>
+        </summary>
+        <div class="dim-body">
+          <div class="dim-judgment">
+            <ul>
+              <li><strong>FR-8 : la conséquence Pilates est fausse contre le CSV qu'elle invoque.</strong> <span class="tag">rubric · done-ness</span> « Une demande de Pilates ne produit jamais de nom » est faux dans 9 cas sur 21 — Sarah André (Pilates, Mardi;Jeudi, Débutant) <em>est</em> dans le vivier. Télescopage de noms entre la protagoniste de UJ-2 et un profil d'amorçage homonyme.</li>
+              <li><strong>L'heure est exclue du périmètre mais requise par la jouabilité.</strong> <span class="tag">rubric · done-ness</span> FR-2 et §9 l'excluent deux fois ; UJ-1 et FR-10 en dépendent. La météo est intrinsèquement horaire : on ne peut pas évaluer la jouabilité d'un « mardi ».</li>
+              <li><strong>« Anna est prévenue » n'est adossé à aucune exigence.</strong> <span class="tag">rubric · decision-readiness</span> Le récit l'affirme, la question ouverte 11.6 demande encore si un message part, aucune des 13 FR ne couvre la notification du partenaire — et le §7 interdit d'annoncer ce qui n'a pas eu lieu.</li>
+              <li><strong>La maquette fixe un seuil de jouabilité que FR-10 déclare non fixé.</strong> <span class="tag">dérive</span> « Au-dessus de 32 °C », écrit deux fois, sans aucune source dans le PRD, l'addendum ou les recherches — et le memlog UX affirme le contraire de sa propre maquette.</li>
+              <li><strong>La maquette montre Anna, profil d'amorçage, en train de confirmer.</strong> <span class="tag">dérive</span> Le glossaire dit « ne répond jamais » ; la maquette l'écrit ligne 118 puis la fait confirmer ligne 222.</li>
+            </ul>
+          </div>
+        </div>
+      </details>
+    </section>
+
+    <h2 style="font-size:15px;text-transform:uppercase;letter-spacing:0.04em;color:var(--muted);margin:28px 0 10px">Rubric qualité — les sept dimensions</h2>
+
+    <section class="dimension">
+      <details>
+        <summary>
+          <h2>1. Decision-readiness</h2>
+          <span class="verdict-pill verdict-adequate">adequate</span>
+        </summary>
+        <div class="dim-body">
+          <div class="dim-judgment">
+            <p>Le PRD prend des décisions et les affiche comme telles, ce qui est rare. Le §5.2 ne se contente pas d'énoncer « le jour se négocie, le niveau se défend » : il donne le calcul qui a départagé les deux options (113/127 contre 46/127) et nomme le perdant. Le §4 assume explicitement le coût de sa décision — « C'est moins satisfaisant qu'une fausse confirmation, et c'est délibéré ». Le §7 <em>Sécurité des personnes</em> dit qu'il n'y a ni vérification d'identité, ni signalement, ni réputation, et que ce serait inacceptable avec de vrais utilisateurs : c'est le contraire du lissage. Les six questions du §11 sont réellement ouvertes — aucune ne porte sa réponse dans la phrase suivante.</p>
+            <p>Ce qui empêche le verdict <em>strong</em>, c'est qu'une décision <strong>porteuse</strong> est traitée comme une question de fin de document alors qu'elle contredit un garde-fou de milieu de document. La question 11.6 n'est pas un détail : toute la valeur du rendez-vous unilatéral repose sur le fait que le partenaire <em>est</em> prévenu. Si aucun message ne part, le bot annonce quelque chose qui n'a pas eu lieu — exactement ce que le §7 interdit. Le PRD ne voit pas cette collision.</p>
+            <p>Second angle mort : le §4 annonce <strong>deux</strong> populations et bâtit tout le produit dessus, mais les FR en fabriquent une troisième. FR-3 enregistre l'utilisateur « à l'issue d'une demande », alors que FR-4 ne réclame un compte qu'à la mise en relation. Un visiteur qui cherche, obtient des propositions et s'en va est donc un <em>utilisateur inscrit</em> au sens du glossaire — lequel affirme qu'il est « joignable, et susceptible de répondre ». Il ne l'est pas. Le modèle à deux populations, meilleure idée du document, est déjà faux à l'intérieur du document.</p>
+          </div>
+        </div>
+        <div class="findings-list">
+          <article class="finding">
+            <header><span class="badge badge-sev-critical">critical</span><h3 class="finding-title">« Anna est prévenue » n'est adossé à aucune exigence</h3><span class="finding-location">§2.3 UJ-1, §7, §11.6</span></header>
+            <div class="finding-note">Le parcours nominal, le garde-fou « aucune confirmation annoncée qui n'ait été donnée » et la question ouverte 6 disent trois choses incompatibles : le récit affirme que le partenaire est prévenu, la question demande si un message part vraiment, et aucune des 13 FR ne couvre la notification du partenaire.</div>
+            <div class="finding-fix"><strong>Fix :</strong> trancher la question 6 maintenant, puis créer une FR « prévenir le partenaire » (déclencheur, canal, contenu, et ce que le bot est autorisé à dire si rien ne part) — ou réécrire UJ-1 en « Anna sera contactée si… ».</div>
+          </article>
+          <article class="finding">
+            <header><span class="badge badge-sev-high">high</span><h3 class="finding-title">Le canal de notification n'existe nulle part</h3><span class="finding-location">§6, FR-9, FR-13</span></header>
+            <div class="finding-note">Le memlog acte que la surface est web responsive et qu'il faut donc « un autre canal pour notifier qu'un adversaire a répondu » ; cette conséquence n'a jamais été portée dans le PRD. FR-9 et FR-13 sont suspendus dans le vide.</div>
+            <div class="finding-fix"><strong>Fix :</strong> une ligne de NFR ou une conséquence de FR-4 nommant le canal (e-mail du compte) et le délai attendu.</div>
+          </article>
+          <article class="finding">
+            <header><span class="badge badge-sev-high">high</span><h3 class="finding-title">Rejoindre le vivier est imposé, pas consenti</h3><span class="finding-location">FR-3, §2.3, §7</span></header>
+            <div class="finding-note">UJ-1 le dit franchement (« sans l'avoir demandé ») et FR-3 se contente d'informer. Le §7 promet pourtant qu'« à chaque fois qu'il demande quelque chose, il dit pourquoi » : ici il ne demande pas, il inscrit. Pour un produit qui expose des personnes à d'autres personnes, information ≠ opt-in, et la décision n'est prise nulle part.</div>
+            <div class="finding-fix"><strong>Fix :</strong> trancher explicitement (inscription automatique avec information, ou proposition refusable), l'écrire dans FR-3, et taguer si c'est une inférence.</div>
+          </article>
+          <article class="finding">
+            <header><span class="badge badge-sev-medium">medium</span><h3 class="finding-title">Le modèle à deux populations en produit trois</h3><span class="finding-location">§3, §4, FR-3, FR-4</span></header>
+            <div class="finding-note">L'utilisateur enregistré mais sans compte n'est ni un profil d'amorçage (il a une ville, un vrai profil) ni un utilisateur inscrit joignable. Le glossaire affirme le contraire.</div>
+            <div class="finding-fix"><strong>Fix :</strong> soit conditionner FR-3 à l'existence d'un moyen de contact, soit ajouter au §3 la troisième population et dire comment le bot la traite quand elle sort en résultat de recherche.</div>
+          </article>
+        </div>
+      </details>
+    </section>
+
+    <section class="dimension">
+      <details>
+        <summary>
+          <h2>2. Substance over theater</h2>
+          <span class="verdict-pill verdict-adequate">adequate</span>
+        </summary>
+        <div class="dim-body">
+          <div class="dim-judgment">
+            <p>La différenciation est <strong>gagnée</strong>, pas décorative. <code>research-paysage.md</code> passe en revue une quinzaine de produits réels avec chiffres et sources, conclut qu'aucun n'utilise une interface conversationnelle, et le §1 reprend ce constat en le retournant contre lui-même : « C'est soit la différenciation du produit, soit le signe que la conversation n'est pas la bonne forme. » C'est l'inverse du théâtre d'innovation. Même chose pour le non-objectif « pas de classement public », qui cite <code>research-niveau.md</code> §4.7 — citation vérifiée. Et le §4 existe parce que la recherche a identifié le vide comme cause de mort, pas parce qu'un gabarit prévoyait une section.</p>
+            <p>Le théâtre est ailleurs, et il est concentré au §6. Les quatre NFR sont des paragraphes bien écrits sans une seule borne. « Produire un signe de vie plutôt qu'un silence » — au bout de combien de temps ? « Ne bloque jamais le parcours entier » — quel comportement par intégration tombée ? « Retrouve ses demandes en cours » — sur quelle fenêtre ? « Responsive » est un adjectif seul. Ce sont exactement les phrases à signaler, et elles sont dans la section censée poser les bornes.</p>
+            <p>Plus subtil : le mécanisme le plus fort du produit n'est jamais énoncé comme tel. Le memlog est explicite — « la conversation fait office d'inscription […] attaque directement le problème de densité identifié comme mortel par la recherche ». Le PRD mentionne le vivier amorcé (§4) et le profil-sans-formulaire (§5.1) dans deux sections différentes, sans jamais les joindre en une réponse à la cause de mort n°1. La meilleure idée du document est dispersée.</p>
+          </div>
+        </div>
+        <div class="findings-list">
+          <article class="finding">
+            <header><span class="badge badge-sev-high">high</span><h3 class="finding-title">Quatre NFR, zéro borne</h3><span class="finding-location">§6</span></header>
+            <div class="finding-note">Latence, robustesse, reprise et responsive énoncées en prose sans seuil, sans fenêtre et sans comportement par service. Aucune n'est vérifiable, donc aucune ne contraindra l'implémentation.</div>
+            <div class="finding-fix"><strong>Fix :</strong> un chiffre chacune — signe de vie sous N secondes ; par intégration en panne, ce que le bot fait et ce qu'il dit ; durée de conservation d'une demande ; largeur d'écran cible minimale.</div>
+          </article>
+          <article class="finding">
+            <header><span class="badge badge-sev-medium">medium</span><h3 class="finding-title">FR-10 n'a pas de seuil et le sait</h3><span class="finding-location">§5.3</span></header>
+            <div class="finding-note">Une section entière justifiée par la santé (« chaleur excessive, vent dangereux ») dont le <code>[NOTE FOR PM]</code> reconnaît qu'aucun seuil n'est fixé. Tant qu'ils manquent, la conséquence testable centrale de FR-10 est un adjectif.</div>
+            <div class="finding-fix"><strong>Fix :</strong> poser trois seuils provisoires maintenant, quitte à les réviser — un seuil faux est corrigeable, un seuil absent ne l'est pas.</div>
+          </article>
+          <article class="finding">
+            <header><span class="badge badge-sev-medium">medium</span><h3 class="finding-title">La réponse à la cause de mort n°1 n'est jamais formulée</h3><span class="finding-location">§1, §4, §5.1</span></header>
+            <div class="finding-note">Le vivier amorcé et l'inscription-par-conversation sont les deux moitiés d'une même réponse au problème de densité, et le PRD ne les rapproche jamais. Un lecteur aval y verra deux fonctionnalités, pas une stratégie.</div>
+            <div class="finding-fix"><strong>Fix :</strong> une phrase au §4 ou au §1 disant que la conversation-inscription est le mécanisme de croissance du vivier, et que c'est ce qui distingue ce produit des matchers purs morts du vide.</div>
+          </article>
+        </div>
+      </details>
+    </section>
+
+    <section class="dimension">
+      <details>
+        <summary>
+          <h2>3. Strategic coherence</h2>
+          <span class="verdict-pill verdict-adequate">adequate</span>
+        </summary>
+        <div class="dim-body">
+          <div class="dim-judgment">
+            <p>Il y a une thèse, et elle est double sans être incohérente : la conversation comme forme, et l'honnêteté comme contrainte. Les deux se tiennent — c'est parce que le bot n'invente rien (§7) que la conversation reste utilisable, et parce que le niveau est défendu (§5.2) que le produit a quelque chose à vendre. Les 13 FR servent toutes UJ-1 ou UJ-2 ; aucune ne ressemble à une capacité qui traînait dans un backlog. La priorisation suit la thèse et non la facilité : le comportement en l'absence de résultat, qui serait un traitement d'erreur dans n'importe quel autre PRD, est promu au rang de comportement principal, sur la foi d'un chiffre — 55 % — recalculé et exact.</p>
+            <p>Ce sont les critères de réussite qui décrochent. Le §10 valide l'honnêteté (SM-2), l'élargissement (SM-3) et le bout-en-bout (SM-1) — mais <strong>rien ne teste le pari du §1</strong>. Le PRD affirme qu'aucun concurrent grand public n'a fait de la conversation son interface, assume que c'est peut-être un signal négatif, et ne se donne aucun moyen de savoir laquelle des deux lectures est la bonne. SM-1 mesure que le tuyau ne fuit pas, pas que la forme conversationnelle vaut mieux qu'une liste avec des filtres. La revendication la plus risquée est la seule qui ne soit pas instrumentée.</p>
+            <p>Les contre-métriques sont bien choisies dans leur direction — SM-C1 nomme précisément la façon de tricher SM-3, ce qui est le test d'une bonne contre-métrique — mais aucune n'a de borne ni d'observable. On ne peut pas constater qu'on a optimisé un taux qu'on ne mesure pas. Elles mordent sur le papier, pas en exploitation.</p>
+          </div>
+        </div>
+        <div class="findings-list">
+          <article class="finding">
+            <header><span class="badge badge-sev-high">high</span><h3 class="finding-title">Aucun critère ne teste le pari central</h3><span class="finding-location">§10 vs §1</span></header>
+            <div class="finding-note">La thèse du produit est que la conversation est la bonne forme ; SM-1 à SM-3 mesurent la complétude du parcours, la non-invention et le taux de rattrapage, jamais la forme.</div>
+            <div class="finding-fix"><strong>Fix :</strong> ajouter un SM sur la conversation — nombre de tours entre la première phrase et la première proposition, ou part de sessions où l'utilisateur réclame explicitement une liste, une carte ou un filtre (signal que la forme ne convient pas).</div>
+          </article>
+          <article class="finding">
+            <header><span class="badge badge-sev-high">high</span><h3 class="finding-title">SM-3 est infalsifiable alors que la donnée fournit le seuil</h3><span class="finding-location">§10</span></header>
+            <div class="finding-note">« Une proposition utilisable dans la grande majorité des cas » : ni échantillon, ni seuil, ni définition d'« utilisable ». Le §5.2 a pourtant déjà le chiffre à opposer — l'élargissement sur le jour récupère 89 % des recherches vides.</div>
+            <div class="finding-fix"><strong>Fix :</strong> « ≥ 85 % des 127 combinaisons sans résultat exact du jeu d'amorçage produisent au moins un candidat du niveau exact demandé ».</div>
+          </article>
+          <article class="finding">
+            <header><span class="badge badge-sev-medium">medium</span><h3 class="finding-title">SM-1 revendique une couverture qu'il n'a pas</h3><span class="finding-location">§10</span></header>
+            <div class="finding-note">« Valide FR-1 à FR-13 » : le parcours UJ-1 n'exerce ni FR-7, ni FR-8, ni FR-9 hors cas limite, ni la transition vers <em>confirmée</em> de FR-13 — laquelle est de toute façon hors périmètre v1.</div>
+            <div class="finding-fix"><strong>Fix :</strong> restreindre la revendication de SM-1 aux FR réellement traversées et ajouter un SM adossé à UJ-2, qui couvre le cas majoritaire.</div>
+          </article>
+          <article class="finding">
+            <header><span class="badge badge-sev-medium">medium</span><h3 class="finding-title">Les deux contre-métriques ne sont pas observables</h3><span class="finding-location">§10</span></header>
+            <div class="finding-note">« À ne pas optimiser » sans borne ni mesure : rien ne permettra jamais de dire qu'elles ont été violées.</div>
+            <div class="finding-fix"><strong>Fix :</strong> une borne à SM-C2 (nombre maximal de tours avant la première proposition) et une observable à SM-C1 (part des mises en relation obtenues via FR-7, c'est-à-dire par descente de niveau — si elle monte, la promesse s'érode).</div>
+          </article>
+        </div>
+      </details>
+    </section>
+
+    <section class="dimension">
+      <details>
+        <summary>
+          <h2>4. Done-ness clarity</h2>
+          <span class="verdict-pill verdict-adequate">adequate</span>
+        </summary>
+        <div class="dim-body">
+          <div class="dim-judgment">
+            <p>Le socle est bon et mérite d'être dit : les <strong>13 FR ont chacune au moins une conséquence testable réelle</strong> — reprises une par une — et plusieurs sont d'une qualité inhabituelle parce qu'elles citent des données littérales vérifiables. FR-2 donne la phrase d'entrée et la structure de sortie attendue. FR-5 nomme Emma Leroy : <strong>vérifié</strong>, elle est bien l'unique profil Tennis/Mardi/Débutant. FR-6 nomme Anna, Iris et Tessa : <strong>vérifié</strong>, ce sont exactement les trois profils Tennis/Intermédiaire, et l'union de leurs jours est bien {Lundi, Mercredi, Samedi}, que UJ-1 restitue correctement. Un ingénieur peut écrire ces tests tels quels.</p>
+            <p><strong>Une conséquence est fausse.</strong> FR-8 affirme qu'« une demande de Pilates ne produit jamais de nom de partenaire » ; c'est faux dans 9 des 21 combinaisons possibles. Sarah André <em>est</em> dans le vivier (Pilates, Mardi;Jeudi, Débutant) : toute demande de Pilates par un Débutant la renvoie, et une demande Intermédiaire mardi ou jeudi la renvoie via l'élargissement adjacent de FR-7. Seul un demandeur Avancé ne trouve jamais rien. La cause est un télescopage de noms : le memlog notait Sarah André comme piège de démonstration <em>en tant que chercheuse</em>, et le PRD en a fait une protagoniste homonyme dont le récit affirme qu'« elle est la seule pratiquante de Pilates de tout le vivier » — ce qui ne peut être vrai que si la protagoniste <strong>est</strong> le profil d'amorçage, hypothèse que le §4 exclut formellement.</p>
+            <p><strong>Une exclusion de périmètre contredit deux fonctionnalités.</strong> FR-2 sort l'heure de la journée et le §9 la reconduit en hors périmètre. Or UJ-1 fait dire au bot que « mercredi s'annonce très chaud en fin d'après-midi » et FR-10 exige de « proposer une alternative (autre moment, autre jour) ». La météo est intrinsèquement horaire : on ne peut pas évaluer la jouabilité d'un « mardi ». Le PRD exclut la donnée dont sa propre section §5.3 a besoin.</p>
+            <p><strong>Une conséquence pointe vers un parcours qui n'existe pas.</strong> FR-13 exige qu'une rencontre « passe à <em>confirmée</em> quand celui-ci accepte », alors que le §9 place le parcours d'acceptation hors périmètre. Cette conséquence n'est pas testable en v1, par construction.</p>
+          </div>
+        </div>
+        <div class="findings-list">
+          <article class="finding">
+            <header><span class="badge badge-sev-critical">critical</span><h3 class="finding-title">FR-8 : la conséquence Pilates est fausse contre le CSV qu'elle invoque</h3><span class="finding-location">§5.2 FR-8, §2.3 UJ-2</span></header>
+            <div class="finding-note">Vérification faite sur <code>SportsProfiles.csv</code> : Sarah André (Pilates, Mardi;Jeudi, Débutant) est dans le vivier, donc une demande de Pilates renvoie bien un nom dans 9 cas sur 21 (tous les Débutants quel que soit le jour, plus les Intermédiaires mardi et jeudi via FR-7). Le récit UJ-2 et sa conséquence testable confondent la protagoniste avec un profil d'amorçage homonyme.</div>
+            <div class="finding-fix"><strong>Fix :</strong> renommer la protagoniste de UJ-2, et remplacer la conséquence par un cas réellement vide — soit un sport absent du vivier (déjà couvert par FR-2), soit « Pilates, Avancé », qui est vide tous les jours et le reste après élargissement.</div>
+          </article>
+          <article class="finding">
+            <header><span class="badge badge-sev-critical">critical</span><h3 class="finding-title">L'heure est exclue du périmètre mais requise par la jouabilité</h3><span class="finding-location">FR-2, FR-10, §2.3 UJ-1, §9</span></header>
+            <div class="finding-note">Le PRD exclut deux fois l'heure de la journée et lui fait jouer un rôle central deux fois. Sans granularité horaire, FR-10 ne peut ni évaluer un créneau ni « proposer un autre moment », et le passage le plus concret de UJ-1 devient irréalisable.</div>
+            <div class="finding-fix"><strong>Fix :</strong> distinguer explicitement les deux usages — l'heure n'est <strong>pas</strong> une contrainte d'appariement (les données d'amorçage ne la portent pas) mais <strong>est</strong> fixée en fin de conversation entre les deux personnes, et c'est cette heure-là que la jouabilité évalue. Une phrase au §5.3 et un amendement au hors-périmètre du §9.</div>
+          </article>
+          <article class="finding">
+            <header><span class="badge badge-sev-high">high</span><h3 class="finding-title">FR-13 : conséquence inexerçable en v1</h3><span class="finding-location">§5.5, §9</span></header>
+            <div class="finding-note">« Passe à <em>confirmée</em> quand celui-ci accepte » suppose un parcours d'acceptation que le §9 déclare hors périmètre.</div>
+            <div class="finding-fix"><strong>Fix :</strong> marquer cette conséquence v2, ou spécifier le minimum côté partenaire qui la rend atteignable (un lien d'acceptation à usage unique suffit).</div>
+          </article>
+          <article class="finding">
+            <header><span class="badge badge-sev-high">high</span><h3 class="finding-title">FR-3 : la déduplication n'a aucun identifiant sur lequel s'appuyer</h3><span class="finding-location">§5.1</span></header>
+            <div class="finding-note">« Le vivier ne contient pas deux profils pour la même personne » alors que FR-4 garantit qu'aucun compte n'existe à ce stade. Un visiteur anonyme qui revient est indiscernable d'un nouveau. La conséquence n'est pas testable.</div>
+            <div class="finding-fix"><strong>Fix :</strong> nommer la clé d'identité et le moment où elle existe (compte via FR-4, ou fusion différée à la création de compte), et rattacher la conséquence à FR-4.</div>
+          </article>
+          <article class="finding">
+            <header><span class="badge badge-sev-high">high</span><h3 class="finding-title">FR-8 n'a aucune conséquence positive</h3><span class="finding-location">§5.2</span></header>
+            <div class="finding-note">Ses trois conséquences sont des interdictions (ne jamais nommer, ne jamais inventer, ne jamais changer de sport). Rien ne dit ce que la réponse <strong>contient</strong>, alors que c'est le comportement majoritaire du produit à 55 % et que le PRD en fait un comportement principal.</div>
+            <div class="finding-fix"><strong>Fix :</strong> ajouter une conséquence sur le contenu du refus — nommer le sport et le jour tentés, dire ce qui a été élargi, et enchaîner sur l'alerte FR-9.</div>
+          </article>
+          <article class="finding">
+            <header><span class="badge badge-sev-medium">medium</span><h3 class="finding-title">FR-7 est permissif, donc satisfaisable en ne faisant rien</h3><span class="finding-location">§5.2</span></header>
+            <div class="finding-note">« Le bot <strong>peut</strong> proposer un niveau adjacent » : une implémentation qui ne descend jamais respecte l'exigence et ses trois conséquences.</div>
+            <div class="finding-fix"><strong>Fix :</strong> énoncer l'obligation et sa condition de déclenchement, ou assumer que FR-7 est une autorisation et le dire.</div>
+          </article>
+          <article class="finding">
+            <header><span class="badge badge-sev-medium">medium</span><h3 class="finding-title">FR-9 est sans bornes</h3><span class="finding-location">§5.2</span></header>
+            <div class="finding-note">Durée de vie d'une alerte, critère de déclenchement (correspondance exacte ou élargie ?), nombre d'alertes simultanées, comportement si le profil correspondant est un profil d'amorçage : rien n'est fixé.</div>
+            <div class="finding-fix"><strong>Fix :</strong> au minimum le critère de déclenchement et une durée de validité.</div>
+          </article>
+          <article class="finding">
+            <header><span class="badge badge-sev-medium">medium</span><h3 class="finding-title">FR-11 est dans le périmètre MVP avec une source de données non tranchée</h3><span class="finding-location">§5.4, §9, addendum</span></header>
+            <div class="finding-note">L'addendum note « Terrains : non tranché ». Le PRD met la proposition de terrains dans le périmètre sans remonter le risque, si bien que la seule branche garantie atteignable est « le bot dit qu'il n'a pas de donnée ».</div>
+            <div class="finding-fix"><strong>Fix :</strong> une question ouverte ou un <code>[NOTE FOR PM]</code> au §5.4 signalant que la faisabilité de FR-11 dépend d'une source non identifiée.</div>
+          </article>
+          <article class="finding">
+            <header><span class="badge badge-sev-low">low</span><h3 class="finding-title">« Niveau adjacent » n'est pas défini</h3><span class="finding-location">§3, FR-7</span></header>
+            <div class="finding-note">Le terme porte toute la logique de FR-7 et sa troisième conséquence l'utilise implicitement, mais le glossaire s'arrête aux trois valeurs.</div>
+            <div class="finding-fix"><strong>Fix :</strong> une ligne au §3.</div>
+          </article>
+        </div>
+      </details>
+    </section>
+
+    <section class="dimension">
+      <details>
+        <summary>
+          <h2>5. Scope honesty</h2>
+          <span class="verdict-pill verdict-strong">strong</span>
+        </summary>
+        <div class="dim-body">
+          <div class="dim-judgment">
+            <p>C'est la dimension la mieux tenue. Les omissions ne sont jamais laissées à l'inférence : le §2.2 dit qui n'est pas visé, le §8 donne cinq non-objectifs <em>avec leur raison</em> (dont un adossé à la recherche), et le §9 liste six exclusions explicites en donnant à chaque fois la cause. Le §7 va jusqu'à dire que le traitement de la vie privée serait insuffisant pour un vrai lancement, et pourquoi ce choix est cohérent avec un projet personnel. Le déscopage est proposé, pas fait en silence.</p>
+            <p>Densité des items ouverts : 6 questions ouvertes + 2 <code>[ASSUMPTION]</code> + 3 <code>[NOTE FOR PM]</code> = <strong>11</strong>. Pour un projet personnel d'apprentissage sans jury de relecture, c'est proportionné — plutôt bas au regard du nombre de sujets réellement non tranchés. Aucun n'est un faux-semblant : les trois <code>[NOTE FOR PM]</code> sont posés à de vraies tensions, pas à des points de contrôle confortables.</p>
+            <p>L'aller-retour du §12 est <strong>complet</strong> : deux <code>[ASSUMPTION]</code> inline, deux entrées à l'index, correspondance exacte dans les deux sens. Le reproche porte uniquement sur le sous-taggage : deux ou trois inférences réelles circulent sans marque, et un garde-fou contredit une question ouverte.</p>
+          </div>
+        </div>
+        <div class="findings-list">
+          <article class="finding">
+            <header><span class="badge badge-sev-medium">medium</span><h3 class="finding-title">Un garde-fou contredit une question ouverte</h3><span class="finding-location">§7 vs §11.6</span></header>
+            <div class="finding-note">Le §7 affirme comme acquis que « le bot les nomme et <strong>les contacte</strong> », pendant que la question 6 demande si un SMS part réellement. Le lecteur ne peut pas savoir lequel des deux fait foi.</div>
+            <div class="finding-fix"><strong>Fix :</strong> aligner — soit le §7 devient conditionnel jusqu'à l'arbitrage, soit la question 6 se ferme.</div>
+          </article>
+          <article class="finding">
+            <header><span class="badge badge-sev-medium">medium</span><h3 class="finding-title">L'inscription automatique au vivier n'est pas taguée</h3><span class="finding-location">§2.3 UJ-1, FR-3</span></header>
+            <div class="finding-note">Que l'utilisateur accepte d'être rendu trouvable par des inconnus au seul motif qu'il a parlé au bot est une inférence, non une chose confirmée. Elle est même mise en avant comme un bénéfice (« sans l'avoir demandé »).</div>
+            <div class="finding-fix"><strong>Fix :</strong> <code>[ASSUMPTION: l'inscription au vivier est automatique et signalée, non soumise à acceptation]</code> + entrée au §12.</div>
+          </article>
+          <article class="finding">
+            <header><span class="badge badge-sev-medium">medium</span><h3 class="finding-title">L'addendum et le PRD divergent sur le niveau</h3><span class="finding-location">addendum, §9, §11.5</span></header>
+            <div class="finding-note">L'addendum annonce que le PRD « n'énoncera que la capacité attendue et ses propriétés observables (le niveau se corrige avec l'usage, il est affiché comme une fourchette, il est distinct par sport) ». Le PRD fait l'inverse : niveau déclaratif à trois valeurs, correction par l'usage en hors périmètre. Un des deux documents est périmé et l'aval ne saura pas lequel.</div>
+            <div class="finding-fix"><strong>Fix :</strong> corriger le paragraphe de l'addendum pour refléter l'arbitrage réellement pris.</div>
+          </article>
+          <article class="finding">
+            <header><span class="badge badge-sev-low">low</span><h3 class="finding-title">Aucun <code>[NON-GOAL for MVP]</code> inline</h3><span class="finding-location">tout le document</span></header>
+            <div class="finding-note">Les omissions sont concentrées en §8 et §9, ce qui est lisible, mais aucune n'est signalée là où elle pourrait être silencieusement supposée — notamment au §5.4 (le produit ne réserve rien) et au §5.5 (aucune écriture dans l'agenda du partenaire).</div>
+            <div class="finding-fix"><strong>Fix :</strong> deux callouts inline, ou rien du tout si le regroupement est assumé.</div>
+          </article>
+        </div>
+      </details>
+    </section>
+
+    <section class="dimension">
+      <details>
+        <summary>
+          <h2>6. Downstream usability</h2>
+          <span class="verdict-pill verdict-adequate">adequate</span>
+        </summary>
+        <div class="dim-body">
+          <div class="dim-judgment">
+            <p>Le PRD est un chain-top et il s'est équipé pour l'être : le §0 nomme ses consommateurs aval, déclare le vocabulaire du §3 <strong>contraignant</strong>, et renvoie le « comment » à l'addendum. Les identifiants sont propres — FR-1 à FR-13 contigus et uniques, UJ-1/UJ-2, SM-1 à SM-3 plus SM-C1/SM-C2, aucun trou, aucun doublon. Les annotations « Réalise UJ-x » couvrent toutes les sections de fonctionnalités. Les renvois externes résolvent : <code>research-niveau.md</code> §4.7 et <code>research-paysage.md</code> §2 et §3 disent bien ce que le PRD leur fait dire. Les deux UJ ont un protagoniste nommé qui porte son contexte inline — l'entrée Journey-led est correctement tenue.</p>
+            <p>Deux problèmes limitent l'extraction aval. D'abord une asymétrie de définition : le §3 décrit le <em>profil d'amorçage</em> champ par champ et ne dit <strong>rien</strong> des champs d'un <em>utilisateur inscrit</em>. Or FR-11 lui ajoute une ville, FR-4 un compte, FR-9 un moyen d'être notifié : l'aval devra inventer un modèle que le PRD avait toutes les cartes pour poser. Ensuite le glossaire est incomplet là où il compte : « candidat » (7 occurrences) et « créneau » (12 occurrences) sont deux noms de domaine porteurs, employés jusque dans les conséquences testables, et absents du §3 — alors que le §0 promet un vocabulaire sans synonyme.</p>
+          </div>
+        </div>
+        <div class="findings-list">
+          <article class="finding">
+            <header><span class="badge badge-sev-high">high</span><h3 class="finding-title">Le profil d'un utilisateur inscrit n'est jamais défini</h3><span class="finding-location">§3, FR-4, FR-9, FR-11</span></header>
+            <div class="finding-note">Le glossaire donne les champs exacts du profil d'amorçage et laisse l'autre population sans schéma, alors que trois FR lui ajoutent des attributs. Toute dérivation aval (UX, architecture, stories) devra reconstruire ce modèle de mémoire, et le fera différemment.</div>
+            <div class="finding-fix"><strong>Fix :</strong> symétriser l'entrée du §3 — champs hérités de la demande, ville (FR-11), moyen de contact (FR-4/FR-9), et ce qui reste vide.</div>
+          </article>
+          <article class="finding">
+            <header><span class="badge badge-sev-medium">medium</span><h3 class="finding-title">« Candidat » et « créneau » manquent au glossaire déclaré contraignant</h3><span class="finding-location">§0, §3</span></header>
+            <div class="finding-note">7 et 12 occurrences respectivement, y compris dans les conséquences testables de FR-5, FR-6, FR-8 et FR-10. Un extracteur aval ne saura pas si « candidat » est un synonyme de « partenaire » ni si « créneau » est une <em>rencontre</em> avant confirmation.</div>
+            <div class="finding-fix"><strong>Fix :</strong> deux entrées au §3, ou remplacement systématique par les termes déjà définis.</div>
+          </article>
+          <article class="finding">
+            <header><span class="badge badge-sev-medium">medium</span><h3 class="finding-title">Trois étiquettes pour le même fichier</h3><span class="finding-location">§0, §2.3, §3, §4, §5.2</span></header>
+            <div class="finding-note">« Données d'amorçage », « jeu d'amorçage » et « les 86 profils » désignent la même chose dans cinq sections.</div>
+            <div class="finding-fix"><strong>Fix :</strong> n'en garder qu'une, de préférence celle du glossaire.</div>
+          </article>
+          <article class="finding">
+            <header><span class="badge badge-sev-low">low</span><h3 class="finding-title">Collision de prénom entre une protagoniste et un profil d'amorçage</h3><span class="finding-location">§2.3 UJ-2, CSV</span></header>
+            <div class="finding-note">Au-delà de l'erreur factuelle relevée en done-ness, la coexistence de deux Sarah piégera toute génération automatique de scénarios de test à partir du PRD.</div>
+            <div class="finding-fix"><strong>Fix :</strong> choisir pour les protagonistes des prénoms absents du CSV.</div>
+          </article>
+          <article class="finding">
+            <header><span class="badge badge-sev-low">low</span><h3 class="finding-title">« Rendez-vous », « rencontre » et « créneau » alternent au §5.5</h3><span class="finding-location">§5.5, §3</span></header>
+            <div class="finding-note">Le glossaire ne définit que <em>rencontre</em>, et le titre de section comme la description utilisent les deux autres.</div>
+            <div class="finding-fix"><strong>Fix :</strong> uniformiser sur <em>rencontre</em>.</div>
+          </article>
+        </div>
+      </details>
+    </section>
+
+    <section class="dimension">
+      <details>
+        <summary>
+          <h2>7. Shape fit</h2>
+          <span class="verdict-pill verdict-strong">strong</span>
+        </summary>
+        <div class="dim-body">
+          <div class="dim-judgment">
+            <p>La forme correspond au produit. Produit grand public avec une UX porteuse : les parcours utilisateur sont là, nommés, et réellement load-bearing — UJ-2 ne décore pas, il porte le comportement majoritaire du système. L'absence de section persona autonome est un choix de méthode assumé (entrée Journey-led) et le contexte est effectivement porté inline : Thomas a un âge, une pratique, un déclencheur et un agenda ; Sarah a une pratique et une contrainte.</p>
+            <p>La rigueur allégée du projet personnel est visible aux bons endroits et <em>nommée</em> : le §10 s'ouvre sur « Projet personnel : la mesure est qualitative et volontairement courte », le §7 explique pourquoi la vie privée est traitée en garde-fous et non en section de conformité, et dit franchement que le compromis ne tiendrait pas avec de vrais utilisateurs. C'est la bonne façon d'alléger : en disant qu'on allège et pourquoi.</p>
+            <p>Le document n'est ni sur-formalisé (pas de matrice de responsabilités, pas de dix personas, pas de tableau de risques décoratif) ni sous-formalisé. Le seul écart de calibrage est la longueur : le memlog visait « ~2 pages » et le résultat en fait quatre à cinq fois plus. L'essentiel de ce surplus est de la substance, mais le §6 et le §7 sont les deux endroits où le ratio prose / contenu vérifiable est le plus défavorable.</p>
+          </div>
+        </div>
+        <div class="findings-list">
+          <article class="finding">
+            <header><span class="badge badge-sev-low">low</span><h3 class="finding-title">Écart au format convenu</h3><span class="finding-location">tout le document vs memlog</span></header>
+            <div class="finding-note">Cible actée à ~2 pages, document livré à ~10. Ce n'est pas un défaut en soi puisque le contenu est dense, mais l'écart mérite d'être conscient plutôt que subi.</div>
+            <div class="finding-fix"><strong>Fix :</strong> si compression il doit y avoir, comprimer le §6 (en le remplaçant par des seuils, ce qui le raccourcira) et le §7, pas le §4 ni le §5.2.</div>
+          </article>
+        </div>
+      </details>
+    </section>
+
+    <h2 style="font-size:15px;text-transform:uppercase;letter-spacing:0.04em;color:var(--muted);margin:28px 0 10px">Relecture de dérive — PRD ↔ UX</h2>
+
+    <section class="dimension">
+      <details>
+        <summary>
+          <h2>Dérive — ce qui tient, à ne pas rouvrir</h2>
+          <span class="verdict-pill verdict-strong">fidèle</span>
+        </summary>
+        <div class="dim-body">
+          <div class="dim-judgment">
+            <ul>
+              <li><strong>Le glossaire §3.</strong> Les dix termes (<em>vivier</em>, <em>profil d'amorçage</em>, <em>utilisateur inscrit</em>, <em>partenaire</em>, <em>niveau</em>, <em>jour disponible</em>, <em>demande</em>, <em>élargissement</em>, <em>rencontre</em>, <em>jouabilité</em>) sont employés au sens du PRD, sans synonyme. L'UX va jusqu'à en faire des interdits de microcopie : « adversaire » quand il ne s'agit pas d'un sport de duel, « réservé », « confirmé » sur une rencontre qui ne l'est pas.</li>
+              <li><strong>La règle de matching.</strong> FR-5 → FR-8 sont reproduits état par état, y compris « Débutant et Avancé ne se croisent jamais » et « le niveau n'est pas commenté : il est tenu » sur l'élargissement jour.</li>
+              <li><strong>Le vivier vide comme état principal.</strong> <code>State Patterns</code> l'écrit littéralement : « État <strong>principal</strong>, pas une erreur ». C'est le constat le plus coûteux du PRD et il a survécu intact.</li>
+              <li><strong>Les deux populations.</strong> Carte identique pour un profil d'amorçage et un utilisateur inscrit, différence reportée au seul statut de la rencontre, aucun numéro de téléphone nulle part : le §4 rendu en interface sans le travestir.</li>
+              <li><strong>Les questions ouvertes 1, 5 et 6 sont laissées ouvertes honnêtement.</strong> Le prénom substitut est reconduit avec son <code>[ASSUMPTION]</code>, le niveau reste déclaratif, et l'UX écrit que l'expérience « est rédigée pour être vraie dans les deux cas » sur la question du SMS aux 86 personnes.</li>
+              <li><strong>Les non-objectifs.</strong> Pas de catalogue, pas de note visible, pas de réservation, pas de profils à parcourir : la section <code>Inspiration &amp; Anti-patterns</code> les rejette nommément.</li>
+            </ul>
+          </div>
+        </div>
+      </details>
+    </section>
+
+    <section class="dimension">
+      <details open>
+        <summary>
+          <h2>Dérive — constats critiques</h2>
+          <span class="verdict-pill verdict-broken">2</span>
+        </summary>
+        <div class="findings-list">
+
+          <article class="finding">
+            <header>
+              <span class="badge badge-sev-critical">critique</span>
+              <h3 class="finding-title">La maquette fixe un seuil de jouabilité que le PRD déclare non fixé</h3>
+              <span class="finding-location">FR-10 §5.3 ↔ key-recap-en-attente.html</span>
+            </header>
+            <div class="finding-note">
+              <span class="tag">question ouverte tranchée en douce</span><span class="tag tag-prd">le PRD rattrape</span>
+              <dl class="sides">
+                <dt>Côté PRD</dt>
+                <dd>FR-10, §5.3, <em>Notes</em> : « <code>[NOTE FOR PM]</code> les seuils — à partir de quelle température, de quelle vitesse de vent, de quel indice de qualité d'air — <strong>ne sont pas fixés</strong>. […] <strong>À trancher avant l'implémentation.</strong> » Repris en question ouverte §11.2.</dd>
+                <dt>Côté UX</dt>
+                <dd><code>mockups/key-recap-en-attente.html</code>, l. 137 et 188, deux fois : « <strong>Au-dessus de 32 °C</strong>, l'effort soutenu devient risqué. Je vous propose plutôt 19 h : 26 °C, vent faible, qualité de l'air correcte. » Le memlog UX affirme pourtant le contraire : « les seuils de jouabilite […] restent non fixes […] L'UX specifie le COMPORTEMENT […] sans fixer les valeurs. »</dd>
+              </dl>
+              <p>Doublé d'une contradiction interne au dossier UX : le memlog dit ne pas trancher, la maquette tranche. La valeur écrite dans une maquette est celle qu'un développeur recopiera, et elle n'a été arbitrée par personne. 32 °C n'est pas absurde, mais il n'a aucune source : ni le PRD, ni l'addendum, ni les deux recherches ne contiennent le moindre seuil.</p>
+            </div>
+            <div class="finding-fix"><strong>Correction :</strong> trancher les trois seuils (chaleur, vent, indice de qualité d'air) dans FR-10 et fermer la question §11.2 ; puis remplacer le chiffre en dur de la maquette par la valeur arbitrée. Si l'arbitrage ne peut pas se faire maintenant, neutraliser la phrase de la maquette (« Il fait trop chaud pour un effort soutenu ») pour qu'aucun nombre non décidé ne circule en aval.</div>
+          </article>
+
+          <article class="finding">
+            <header>
+              <span class="badge badge-sev-critical">critique</span>
+              <h3 class="finding-title">La maquette montre Anna, profil d'amorçage, en train de confirmer</h3>
+              <span class="finding-location">§3 glossaire + §4 + FR-13 ↔ key-recap-en-attente.html</span>
+            </header>
+            <div class="finding-note">
+              <span class="tag">contradiction</span><span class="tag tag-ux">l'UX recule</span>
+              <dl class="sides">
+                <dt>Côté PRD</dt>
+                <dd>§3, glossaire : « <strong>Profil d'amorçage</strong> — […] <strong>Ne répond jamais.</strong> » Et §4 : « une rencontre <em>en attente</em> <strong>qui ne sera jamais confirmée</strong> ». FR-13 réserve le passage à <em>confirmée</em> au seul utilisateur inscrit.</dd>
+                <dt>Côté UX</dt>
+                <dd>La maquette se contredit dans le même fichier. l. 118 : « <strong>Anna est un profil d'amorçage : elle ne répondra jamais.</strong> » Puis l. 222, titre du troisième cadre : « <strong>Anna confirme</strong> », pastille <em>Confirmée</em>, « Anna a confirmé. Mercredi 3 septembre, 19 h. »</dd>
+              </dl>
+              <p>Le besoin de montrer l'état <em>confirmée</em> est légitime — FR-13 l'exige — mais il ne peut pas être illustré par Anna.</p>
+            </div>
+            <div class="finding-fix"><strong>Correction :</strong> dans le troisième cadre, remplacer Anna par une partenaire explicitement présentée comme utilisatrice inscrite, et ajouter au commentaire de la maquette « ce cadre n'est atteignable qu'avec un utilisateur inscrit ». Ajouter symétriquement à <code>State Patterns</code>, ligne <em>Rencontre confirmée</em>, la mention « jamais atteignable depuis un profil d'amorçage ».</div>
+          </article>
+
+        </div>
+      </details>
+    </section>
+
+    <section class="dimension">
+      <details open>
+        <summary>
+          <h2>Dérive — constats élevés</h2>
+          <span class="verdict-pill verdict-thin">6</span>
+        </summary>
+        <div class="findings-list">
+
+          <article class="finding">
+            <header>
+              <span class="badge badge-sev-high">élevé</span>
+              <h3 class="finding-title">Les cartes de la maquette affichent des disponibilités qui contredisent les données d'amorçage</h3>
+              <span class="finding-location">§7 + SportsProfiles.csv ↔ key-proposition-partenaires.html</span>
+            </header>
+            <div class="finding-note">
+              <span class="tag">contradiction</span><span class="tag tag-ux">l'UX recule</span>
+              <dl class="sides">
+                <dt>Côté PRD</dt>
+                <dd>§7, <em>Le bot n'invente rien</em> : « Aucune donnée météo, aucun terrain, <strong>aucune disponibilité inventés</strong>. » CSV : <code>Iris … Lundi;Mercredi</code>, <code>Tessa … Lundi;Samedi</code>.</dd>
+                <dt>Côté UX</dt>
+                <dd>« Iris — Intermédiaire · <strong>samedi, dimanche</strong> » et « Tessa — Intermédiaire · <strong>lundi, jeudi</strong> ». Seule Anna (« mercredi, samedi ») est conforme.</dd>
+              </dl>
+              <p>La maquette se présente pourtant comme la preuve du garde-fou : « Ce que la maquette prouve ». C'est l'écran censé démontrer que le bot n'invente rien qui invente.</p>
+            </div>
+            <div class="finding-fix"><strong>Correction :</strong> recopier les jours du CSV dans les trois cartes. Le coût est nul et l'exemplaire redevient citable par l'aval.</div>
+          </article>
+
+          <article class="finding">
+            <header>
+              <span class="badge badge-sev-high">élevé</span>
+              <h3 class="finding-title">Le PRD affirme toujours que le téléphone est l'usage principal</h3>
+              <span class="finding-location">§6 NFR ↔ EXPERIENCE.md §Foundation</span>
+            </header>
+            <div class="finding-note">
+              <span class="tag">contradiction</span><span class="tag tag-prd">le PRD rattrape</span>
+              <dl class="sides">
+                <dt>Côté PRD</dt>
+                <dd>§6 : « <strong>Responsive.</strong> Le site s'utilise au téléphone via le navigateur ; <strong>c'est le cas d'usage principal.</strong> »</dd>
+                <dt>Côté UX</dt>
+                <dd>« <strong>Surface unique : le web responsive, conçu pour le PC d'abord.</strong> […] Le PRD §6 énonce l'inverse […] Cette phrase est <strong>caduque</strong> […] <strong>la correction du PRD est à porter en amont.</strong> »</dd>
+              </dl>
+              <p>L'arbitrage est légitime (signal vivant de l'utilisateur en cours de conception) et il est déjà rendu lisible en aval ; ce qui manque est l'amont. Un architecte qui lit le PRD d'abord dimensionnera pour le mobile.</p>
+            </div>
+            <div class="finding-fix"><strong>Correction :</strong> réécrire la NFR <em>Responsive</em> du §6 (« Le navigateur d'un PC est le cas d'usage principal ; le mobile est servi à parité fonctionnelle complète »), et laisser l'encadré de divergence d'<code>EXPERIENCE.md</code> en place jusqu'à ce que le PRD soit corrigé.</div>
+          </article>
+
+          <article class="finding">
+            <header>
+              <span class="badge badge-sev-high">élevé</span>
+              <h3 class="finding-title">Le produit a un nom, décidé en UX, absent du PRD</h3>
+              <span class="finding-location">frontmatter prd.md ↔ memlog UX + DESIGN.md §Brand &amp; Style</span>
+            </header>
+            <div class="finding-note">
+              <span class="tag">décision UX absente du PRD</span><span class="tag tag-prd">le PRD rattrape</span>
+              <dl class="sides">
+                <dt>Côté PRD</dt>
+                <dd><code>title: "Trouve-moi un partenaire — chatbot de mise en relation sportive"</code>, suivi de « <em>Titre de travail, à confirmer.</em> »</dd>
+                <dt>Côté UX</dt>
+                <dd>« NOM DU PRODUIT retenu : <strong>Ex Aequo</strong>. […] Remplace le titre de travail. » Le nom est devenu structurel : <code>name: Ex Aequo</code> dans les deux frontmatters, une section entière de <code>DESIGN.md</code>, et il est dans la microcopie (« Écrivez à Ex Aequo »).</dd>
+              </dl>
+              <p>Le PRD avait explicitement laissé la question ouverte, donc l'UX n'a pas dépassé son mandat — mais le nommage est une décision de produit, pas de design, et elle n'existe que dans un memlog que l'aval ne lit pas.</p>
+            </div>
+            <div class="finding-fix"><strong>Correction :</strong> porter « Ex Aequo » dans le <code>title</code> du PRD et retirer la mention « titre de travail ». Sans cela, toute recherche aval sur le nom du produit échoue d'un côté ou de l'autre de la chaîne.</div>
+          </article>
+
+          <article class="finding">
+            <header>
+              <span class="badge badge-sev-high">élevé</span>
+              <h3 class="finding-title">L'heure du rendez-vous : le PRD l'exclut, l'UX la collecte</h3>
+              <span class="finding-location">FR-2 + §9 vs FR-12 + UJ-1 ↔ Key Flows étape 8</span>
+            </header>
+            <div class="finding-note">
+              <span class="tag">PRD non couvert, comblé en UX</span><span class="tag tag-prd">le PRD rattrape</span>
+              <dl class="sides">
+                <dt>Côté PRD</dt>
+                <dd>FR-2, <em>Hors périmètre</em> : « l'heure de la journée […] “mardi après-midi” est traité comme “mardi”. » Repris au §9. Mais FR-12 exige un événement d'agenda et UJ-1 dit « il suggère plutôt le début de soirée » — le PRD ne dit jamais d'où sort une heure.</dd>
+                <dt>Côté UX</dt>
+                <dd>« <strong>L'heure se décide ici, et c'est la jouabilité qui l'amène.</strong> […] <strong>Sans alerte de jouabilité, le bot demande simplement l'heure en une phrase.</strong> »</dd>
+              </dl>
+              <p>Le rubric UX l'avait relevé (« Aucun beat ne pose l'heure du créneau ») et le correctif n'a été appliqué que du côté UX. La réponse de l'UX est bonne et doit être adoptée, pas défaite.</p>
+            </div>
+            <div class="finding-fix"><strong>Correction :</strong> distinguer explicitement dans le PRD <strong>l'heure de disponibilité</strong> (hors périmètre, donnée du vivier) et <strong>l'heure de la rencontre</strong> (nécessaire à FR-12), et ajouter une conséquence testable à FR-10 ou FR-12 : l'heure est proposée par la jouabilité, ou demandée en une phrase à défaut.</div>
+          </article>
+
+          <article class="finding">
+            <header>
+              <span class="badge badge-sev-high">élevé</span>
+              <h3 class="finding-title">Le canal de notification est inventé en UX alors que le PRD savait qu'il manquait</h3>
+              <span class="finding-location">FR-9 + FR-13 ↔ EXPERIENCE.md §Information Architecture</span>
+            </header>
+            <div class="finding-note">
+              <span class="tag">décision UX absente du PRD</span><span class="tag tag-prd">le PRD rattrape</span>
+              <dl class="sides">
+                <dt>Côté PRD</dt>
+                <dd>FR-9 : « le bot propose […] de <strong>prévenir l'utilisateur</strong> » — aucun canal. Même silence pour FR-13. Le memlog PRD avait pourtant identifié le trou (« pas de push natif, il faut un autre canal »), sans jamais le porter dans le PRD.</dd>
+                <dt>Côté UX</dt>
+                <dd>« <code>[ASSUMPTION: le canal d'alerte différé est l'e-mail, récupéré au moment de la connexion Google/Microsoft. Le PRD a identifié le trou […] sans le combler.]</code> »</dd>
+              </dl>
+              <p>Posé honnêtement en hypothèse côté UX, mais c'est une capacité produit et une intégration tierce, pas un choix d'interface.</p>
+            </div>
+            <div class="finding-fix"><strong>Correction :</strong> nommer le canal dans FR-9 avec une conséquence testable, ajouter une septième question ouverte si l'arbitrage n'est pas mûr, et ajouter la ligne correspondante au tableau des intégrations de <code>addendum.md</code> (aujourd'hui : agenda, météo, terrains — pas d'e-mail sortant).</div>
+          </article>
+
+          <article class="finding">
+            <header>
+              <span class="badge badge-sev-high">élevé</span>
+              <h3 class="finding-title">« Trois candidats au maximum » est une règle produit inventée en UX, sans règle de sélection nulle part</h3>
+              <span class="finding-location">FR-6 ↔ Component Patterns + DESIGN.md §Layout</span>
+            </header>
+            <div class="finding-note">
+              <span class="tag">UX a inventé</span><span class="tag tag-prd">le PRD rattrape</span>
+              <dl class="sides">
+                <dt>Côté PRD</dt>
+                <dd>FR-6 : « “Tennis, mardi, intermédiaire” renvoie <strong>Anna, Iris et Tessa</strong> ». Aucun plafond, aucun critère d'ordre, aucun comportement au-delà de trois candidats.</dd>
+                <dt>Côté UX</dt>
+                <dd>« <strong>Trois au maximum par proposition.</strong> » Repris dans <code>DESIGN.md</code>. Rien nulle part ne dit <em>lesquels</em> trois.</dd>
+              </dl>
+              <p>Un plafond d'affichage est légitime, mais il produit mécaniquement une troncature, et une troncature sans règle d'ordre est une décision produit laissée au hasard de l'implémentation. Sur 86 profils la question est petite ; elle ne l'est plus quand le vivier grossit, ce qui est la promesse du produit.</p>
+            </div>
+            <div class="finding-fix"><strong>Correction :</strong> une conséquence testable dans FR-6 : critère d'ordre des candidats (proximité du jour demandé ? ordre du vivier ? aléatoire stable ?) et comportement au-delà de trois (le bot dit-il qu'il y en a d'autres ?). L'UX garde le plafond.</div>
+          </article>
+
+        </div>
+      </details>
+    </section>
+
+    <section class="dimension">
+      <details>
+        <summary>
+          <h2>Dérive — constats moyens</h2>
+          <span class="verdict-pill verdict-adequate">6</span>
+        </summary>
+        <div class="findings-list">
+
+          <article class="finding">
+            <header>
+              <span class="badge badge-sev-medium">moyen</span>
+              <h3 class="finding-title">FR-4 et UJ-1 se contredisent dans le PRD ; l'UX a tranché en silence</h3>
+              <span class="finding-location">FR-4 vs UJ-1 ↔ Key Flows étapes 5–9</span>
+            </header>
+            <div class="finding-note">
+              <span class="tag">contradiction interne au PRD</span><span class="tag tag-prd">le PRD rattrape</span>
+              <dl class="sides">
+                <dt>Côté PRD</dt>
+                <dd>FR-4 : « <strong>Retenir un partenaire la déclenche.</strong> » Mais UJ-1 raconte l'inverse : ville, terrains, météo, puis « Thomas valide. <strong>C'est ici que le bot demande un compte.</strong> »</dd>
+                <dt>Côté UX</dt>
+                <dd>Étape 5 « Thomas clique la carte d'Anna » — pas de compte ; étapes 6 à 8 — pas de compte ; étape 9 seulement, « <strong>Le moment du compte.</strong> »</dd>
+              </dl>
+              <p>L'UX a tranché dans le bon sens (celui de UJ-1 et du garde-fou « le compte arrive quand il devient nécessaire »), mais sans trace.</p>
+            </div>
+            <div class="finding-fix"><strong>Correction :</strong> reformuler la conséquence testable de FR-4 : « <strong>Valider un créneau avec un partenaire</strong> déclenche la demande de compte » — retenir une carte ne suffit pas.</div>
+          </article>
+
+          <article class="finding">
+            <header>
+              <span class="badge badge-sev-medium">moyen</span>
+              <h3 class="finding-title">La question ouverte n° 3 est fermée en UX, mais le PRD la liste toujours et parle encore en tutoiement</h3>
+              <span class="finding-location">§11.3 + UJ-1/UJ-2 ↔ EXPERIENCE.md §Voice and Tone</span>
+            </header>
+            <div class="finding-note">
+              <span class="tag">question ouverte tranchée</span><span class="tag tag-prd">le PRD rattrape</span>
+              <dl class="sides">
+                <dt>Côté PRD</dt>
+                <dd>§11.3 : « <strong>Le ton du bot</strong> n'a pas été discuté ». Et le PRD fait parler le bot en tutoiement dans UJ-1 : « <em>Personne à <strong>ton</strong> niveau […] Lequel <strong>t'</strong>arrange ?</em> »</dd>
+                <dt>Côté UX</dt>
+                <dd>« Cette section répond à la question ouverte n° 3 du PRD » ; « <strong>Le registre arrêté : vouvoiement, sympathique mais professionnel — pas un pote.</strong> »</dd>
+              </dl>
+              <p>Légitime — le memlog UX indique que la question était « explicitement deleguee a l'UX » — mais non refermée côté PRD, dont les verbatims sont désormais faux.</p>
+            </div>
+            <div class="finding-fix"><strong>Correction :</strong> fermer §11.3 en renvoyant à <code>EXPERIENCE.md §Voice and Tone</code>, et réécrire au vouvoiement les répliques citées dans UJ-1 et UJ-2 — c'est le seul endroit du PRD où le produit parle, et c'est aujourd'hui le seul endroit qui parle faux.</div>
+          </article>
+
+          <article class="finding">
+            <header>
+              <span class="badge badge-sev-medium">moyen</span>
+              <h3 class="finding-title">La deuxième demande d'une personne déjà inscrite n'existe nulle part</h3>
+              <span class="finding-location">FR-3 ↔ State Patterns + parcours 3</span>
+            </header>
+            <div class="finding-note">
+              <span class="tag">PRD non couvert</span><span class="tag tag-arb">arbitrage nécessaire</span>
+              <dl class="sides">
+                <dt>Côté PRD</dt>
+                <dd>FR-3 : « <strong>Le vivier ne contient pas deux profils pour la même personne.</strong> » Rien sur ce que devient la première demande quand une seconde arrive, ni sur la possibilité qu'un profil porte deux sports.</dd>
+                <dt>Côté UX</dt>
+                <dd>Aucun moment, aucun état, aucun parcours. <code>Fil à froid, connu</code> : le bot « récapitule […] puis rend la parole. <strong>Il ne relance pas, ne propose rien de lui-même</strong> », et le parcours 3 est bâti sur « Thomas ne demande rien. Il ferme. »</dd>
+              </dl>
+              <p>Trou réel, pas un effet du périmètre des trois maquettes clés : <code>EXPERIENCE.md</code> revendique une fermeture d'IA avec une seule exception assumée, qui n'est pas celle-ci.</p>
+            </div>
+            <div class="finding-fix"><strong>Correction :</strong> trancher si un profil porte un ou plusieurs sports, puis ajouter une conséquence testable à FR-3 (mise à jour du profil existant vs création) et une ligne d'état UX « nouvelle demande d'un profil connu ».</div>
+          </article>
+
+          <article class="finding">
+            <header>
+              <span class="badge badge-sev-medium">moyen</span>
+              <h3 class="finding-title">Le contenu de l'événement d'agenda exigé par FR-12 n'est spécifié nulle part côté UX</h3>
+              <span class="finding-location">FR-12 ↔ dossier UX (absent)</span>
+            </header>
+            <div class="finding-note">
+              <span class="tag">PRD non couvert</span><span class="tag tag-ux">l'UX complète</span>
+              <dl class="sides">
+                <dt>Côté PRD</dt>
+                <dd>FR-12 : « <strong>L'événement porte le sport, le partenaire, le lieu et le statut de la rencontre.</strong> »</dd>
+                <dt>Côté UX</dt>
+                <dd>La seule phrase du dossier qui parle du contenu de l'événement est une interdiction : « Aucun numéro de téléphone […] <strong>ni dans l'événement d'agenda</strong>. » Le récapitulatif est spécifié en détail, mais il vit dans le fil, pas dans l'agenda.</dd>
+              </dl>
+              <p>Le rubric UX l'avait relevé (« FR-12 est couvert à moitié ») et le correctif appliqué n'a porté que sur le bloc de choix d'agenda.</p>
+            </div>
+            <div class="finding-fix"><strong>Correction :</strong> une entrée <code>Component Patterns</code> ou une ligne de <code>State Patterns</code> énumérant le contenu de l'événement, avec la microcopie de son titre. C'est la seule chose du produit qui survit hors du fil ; elle mérite une phrase.</div>
+          </article>
+
+          <article class="finding">
+            <header>
+              <span class="badge badge-sev-medium">moyen</span>
+              <h3 class="finding-title">L'UX promet une persistance du fil que la NFR du PRD ne couvre pas</h3>
+              <span class="finding-location">§6 ↔ Interaction Primitives + Component Patterns</span>
+            </header>
+            <div class="finding-note">
+              <span class="tag">UX a inventé</span><span class="tag tag-prd">le PRD rattrape</span><span class="tag tag-arb">ou arbitrage</span>
+              <dl class="sides">
+                <dt>Côté PRD</dt>
+                <dd>§6 : « <strong>Reprise de conversation.</strong> Un utilisateur <strong>inscrit</strong> qui revient retrouve ses demandes en cours et ses rencontres. » La promesse est bornée à l'inscrit.</dd>
+                <dt>Côté UX</dt>
+                <dd>« <strong>Le fil ne se réinitialise jamais tout seul. Aucune expiration de session ne vide la conversation.</strong> » ; « <strong>jamais purgé, jamais réinitialisé</strong> » ; « <strong>Le brouillon survit à une redirection OAuth.</strong> »</dd>
+              </dl>
+              <p>L'extension de la reprise au visiteur <strong>sans compte</strong> est une promesse produit à conséquence directe pour l'architecture : identité anonyme persistante, durée de rétention, et une question de vie privée que le §7 n'aborde pas.</p>
+            </div>
+            <div class="finding-fix"><strong>Correction :</strong> préciser dans la NFR ce qui persiste pour un visiteur sans compte, et pendant combien de temps. Une conversation anonyme conservée indéfiniment est une donnée personnelle que le §7 ne mentionne pas.</div>
+          </article>
+
+          <article class="finding">
+            <header>
+              <span class="badge badge-sev-medium">moyen</span>
+              <h3 class="finding-title">Les étapes narrées sont promues en garantie produit ; le PRD n'en dit rien</h3>
+              <span class="finding-location">§6 latence ↔ La grammaire de l'honnêteté</span>
+            </header>
+            <div class="finding-note">
+              <span class="tag">décision UX absente du PRD</span><span class="tag tag-prd">le PRD rattrape</span>
+              <dl class="sides">
+                <dt>Côté PRD</dt>
+                <dd>§6 : « <strong>Latence conversationnelle.</strong> Une réponse qui demande plusieurs étapes internes doit produire un signe de vie plutôt qu'un silence. » C'est une exigence d'attente, pas de transparence.</dd>
+                <dt>Côté UX</dt>
+                <dd>« <strong>Les étapes narrées sont une trace vérifiable.</strong> Elles ne sont pas un habillage d'attente : <strong>elles disent quelles sources ont réellement été consultées.</strong> »</dd>
+              </dl>
+              <p>Un signe de vie décoratif et une trace fidèle des appels d'outils ne sont pas la même exigence : la seconde contraint l'architecture agentique — chaque appel externe doit être observable et diffusé en temps réel dans le fil.</p>
+            </div>
+            <div class="finding-fix"><strong>Correction :</strong> une phrase dans le §7 (<em>Le bot n'invente rien</em>) plutôt que dans la NFR de latence : les étapes annoncées correspondent aux sources réellement interrogées, et une source qui n'a pas répondu est annoncée comme telle. Une note dans <code>addendum.md</code> pour l'orchestration.</div>
+          </article>
+
+        </div>
+      </details>
+    </section>
+
+    <section class="dimension">
+      <details>
+        <summary>
+          <h2>Dérive — constats faibles</h2>
+          <span class="verdict-pill verdict-strong">2</span>
+        </summary>
+        <div class="findings-list">
+
+          <article class="finding">
+            <header>
+              <span class="badge badge-sev-low">faible</span>
+              <h3 class="finding-title">Le droit de passer outre une alerte de jouabilité est décidé en UX</h3>
+              <span class="finding-location">FR-10 §5.3 ↔ State Patterns + maquette 3</span>
+            </header>
+            <div class="finding-note">
+              <span class="tag">UX a inventé</span><span class="tag tag-prd">le PRD rattrape</span>
+              <dl class="sides">
+                <dt>Côté PRD</dt>
+                <dd>FR-10 : le bot « propose une alternative […] <strong>plutôt que de se contenter d'alerter</strong> ». Rien sur le refus de la contre-proposition, alors que le PRD qualifie le sujet de question de <strong>santé</strong> et non de confort.</dd>
+                <dt>Côté UX</dt>
+                <dd>« <strong>La personne peut passer outre : le bot informe, il n'interdit pas.</strong> » Matérialisé par un bouton « Garder 17 h » à côté de « Retenir 19 h ».</dd>
+              </dl>
+              <p>Élaboration défendable, mais c'est une règle produit sur le seul sujet que le PRD traite en termes de santé.</p>
+            </div>
+            <div class="finding-fix"><strong>Correction :</strong> ajouter à FR-10 une conséquence testable : l'alerte informe et n'interdit pas ; le créneau reste retenable après refus de la contre-proposition.</div>
+          </article>
+
+          <article class="finding">
+            <header>
+              <span class="badge badge-sev-low">faible</span>
+              <h3 class="finding-title">L'état « demande incomplète » oublie le jour</h3>
+              <span class="finding-location">FR-2 ↔ State Patterns</span>
+            </header>
+            <div class="finding-note">
+              <span class="tag">PRD non couvert</span><span class="tag tag-ux">l'UX complète</span>
+              <dl class="sides">
+                <dt>Côté PRD</dt>
+                <dd>FR-2 : « Le bot extrait d'un message libre <strong>le sport, les jours et le niveau</strong> ».</dd>
+                <dt>Côté UX</dt>
+                <dd>« <strong>Demande incomplète</strong> | <strong>Sport ou niveau manquant</strong> ». Le jour est absent du déclencheur, alors que c'est la dimension sur laquelle porte tout l'élargissement.</dd>
+              </dl>
+            </div>
+            <div class="finding-fix"><strong>Correction :</strong> « Sport, jour ou niveau manquant ». Deux mots.</div>
+          </article>
+
+        </div>
+      </details>
+    </section>
+
+    <div class="mechanical">
+      <h3>Notes mécaniques</h3>
+
+      <h4>Notes du rubric qualité</h4>
+      <ul>
+        <li><strong>Chiffres vérifiés contre <code>SportsProfiles.csv</code></strong> (recalcul complet) : 86 profils ✓ ; 11 sports ✓ ; 231 combinaisons ✓ ; 127 vides soit 55 % ✓ ; élargissement du jour récupère 113 des 127 soit 89 % ✓ ; Emma Leroy unique sur Tennis/Mardi/Débutant ✓ ; Anna, Iris et Tessa sont exactement les trois Tennis/Intermédiaire ✓.</li>
+        <li><strong>Précision de reproductibilité (§5.2).</strong> « Relâcher le niveau en conservant le jour n'en récupère que 46 (36 %) » n'est vrai qu'en se limitant aux niveaux <strong>adjacents</strong>, conformément à FR-7. Sans cette contrainte le chiffre est 61 (48 %). La phrase ne dit pas « adjacent » : qui referait le calcul croirait à une erreur.</li>
+        <li><strong>Nuance sur les 231 combinaisons.</strong> Le décompte est uniforme (11 × 7 × 3) et non pondéré par la demande réelle. « 55 % ne renvoient aucun candidat » est un fait sur la grille, pas une prévision du taux d'échec vécu. Le PRD s'appuie fortement sur ce chiffre ; une incise d'une ligne le mettrait à l'abri.</li>
+        <li><strong>Aller-retour de l'index §12 : complet.</strong> Deux <code>[ASSUMPTION]</code> inline (§2.3 UJ-1, §5.1 FR-2), exactement deux entrées à l'index, correspondance exacte dans les deux sens. Aucune orpheline.</li>
+        <li><strong>Identifiants.</strong> FR-1 à FR-13, UJ-1/UJ-2, SM-1 à SM-3 et SM-C1/SM-C2 : contigus, uniques, sans doublon. Toutes les références croisées internes résolvent.</li>
+        <li><strong>Titre.</strong> « Trouve-moi un partenaire » est marqué « titre de travail, à confirmer » au §0 mais ne figure pas parmi les questions ouvertes du §11, qui recense pourtant des points bien moins ouverts.</li>
+        <li><strong>Sections requises.</strong> Rien ne manque pour les enjeux et le type de produit. L'absence de section persona autonome est conforme à l'entrée Journey-led et n'est pas comptée comme un manque.</li>
+      </ul>
+
+      <h4>Dérive du glossaire — terme par terme</h4>
+      <p style="margin:0 0 8px">Les dix termes du §3 sont tenus. Trois glissements mineurs, aucun bloquant :</p>
+      <ul>
+        <li><strong>« la personne »</strong> est employé systématiquement côté UX pour désigner le visiteur, là où le PRD dit « l'utilisateur ». Le choix est juste — un visiteur n'est pas encore un <em>utilisateur inscrit</em> — mais il n'existe pas au glossaire du PRD.</li>
+        <li><strong>§6 « demandes en cours »</strong> → UX « <strong>rencontres et alertes</strong> en cours ». Une demande qui n'a produit ni rencontre ni alerte n'est donc pas reprise. Écart de couverture, pas de vocabulaire — mais il se lit comme un synonyme et n'en est pas un.</li>
+        <li><strong>« Microsoft » (identité) vs « Outlook » (agenda)</strong> cohabitent côté UX — cohérent avec <code>addendum.md</code>, mais aucun des deux documents ne l'écrit ; à inscrire au glossaire pour éviter qu'un troisième document les fusionne.</li>
+      </ul>
+
+      <h4>Traçabilité des identifiants</h4>
+      <ul>
+        <li><code>EXPERIENCE.md</code> ne cite nommément que <strong>FR-4</strong>, <strong>FR-9</strong> et <strong>FR-13</strong>. Les dix autres FR n'ont aucune trace explicite : la vérification de couverture est entièrement manuelle et le restera à chaque évolution du PRD.</li>
+        <li><strong>UJ-2 n'est jamais nommé</strong> dans le dossier UX, alors que le parcours 2 le réalise fidèlement.</li>
+        <li>Aucune référence FR/UJ dans <code>DESIGN.md</code> ni dans les trois maquettes. Aucun identifiant inexistant ou périmé n'a en revanche été trouvé : rien ne référence un FR-14 ou un UJ-3 fantôme.</li>
+      </ul>
+
+      <h4>Liens et statuts</h4>
+      <ul>
+        <li>Les quatre <code>sources:</code> déclarées dans les frontmatters UX résolvent toutes sur le disque. Le <code>.memlog.md</code> du run PRD est déclaré hérité dans le memlog UX mais <strong>absent des <code>sources:</code></strong> — c'est pourtant le seul document où vivent plusieurs décisions produit citées ci-dessus.</li>
+        <li><strong>Asymétrie de statut :</strong> <code>prd.md</code> est en <code>status: draft</code>, <code>EXPERIENCE.md</code> et <code>DESIGN.md</code> sont en <code>status: final</code>. Le document amont, non finalisé, est aujourd'hui moins à jour que les documents qui en dérivent. Aucun lien du PRD ne pointe vers le dossier UX.</li>
+        <li>Le nom <strong>« Ex Aequo » n'apparaît nulle part dans le dossier PRD</strong>, et « Trouve-moi un partenaire » nulle part dans le dossier UX. Les deux moitiés de la chaîne ne partagent aucun nom de produit.</li>
+      </ul>
+
+      <h4>Résidus et menues erreurs</h4>
+      <ul>
+        <li><strong>Résidu intra-UX du pivot desktop :</strong> <code>EXPERIENCE.md</code>, <em>Responsive &amp; Platform</em>, énonce encore « Frappe au vol et Échap arment le champ » alors qu'<code>Interaction Primitives</code> déclare cette règle <strong>retirée</strong>. Seul endroit du couple où la règle supprimée survit.</li>
+        <li><strong>Composant non déclaré :</strong> la maquette 3 affiche une rangée de trois boutons de réponse (« Retenir 19 h » / « Garder 17 h » / « Un autre jour ») qui ne correspond à aucune entrée de <code>Component Patterns</code> ni de <code>DESIGN.md</code>. C'est aussi la seule chose du produit qui ressemble à des puces de réponse rapide, que <code>Inspiration &amp; Anti-patterns</code> rejette « comme interface dominante ».</li>
+        <li><strong>Date fausse dans la maquette 3 :</strong> « Mercredi 3 septembre » — le 3 septembre 2026 est un <strong>jeudi</strong> (le mercredi est le 2).</li>
+      </ul>
+    </div>
+
+    <footer class="report-footer">
+      <div class="meta">
+        <span>Rubric : review-rubric.md</span>
+        <span>Dérive : review-drift-prd-ux.md</span>
+        <span>Généré : 2026-08-26T15:02:01Z</span>
+      </div>
+    </footer>
+  </div>
+</body>
+</html>

@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ex Aequo — Le remplacement de sport</title>
+<style>
+/* ============================================================
+   ÉCRAN 6 — LE REMPLACEMENT DE SPORT (FR-3)                    v3.3 · 2026-08-27
+   NOUVEAU en v3. Le PRD v2 revient au profil MONO-SPORT : une demande sur un
+   autre sport REMPLACE le sport du profil, son niveau et ses jours.
+   C'est le geste le plus destructeur du produit.
+
+   v3.2 — LE FIL VISIBLE N EST PLUS UNE REGION LIVE. Il ne porte plus role="log" :
+   trois satellites masques (log pour le tour complet, status pour l etape, status
+   pour toute mutation d un bloc persistant) portent les annonces.
+   Ce qui s affiche et ce qui se prononce suivent desormais deux chemins.
+
+   v3.3 — LA MINUTERIE EST COUPEE. Une annonce est ecrite des qu elle est produite ;
+   aucun etat ne peut etre retenu. Le decouplage reste, pour la vraie raison : un fil
+   live est irreparable pour les mutations de composant.
+
+   Sections de spine qui gouvernent cet écran :
+     DESIGN.md     → Components (sport-replace, button-quiet) · Do's and Don'ts
+     EXPERIENCE.md → Information Architecture (moment « remplacement de sport ») ·
+                     Component Patterns · State Patterns (remplacement de sport) ·
+                     Voice and Tone · Key Flows, parcours 3, variante
+
+   RÈGLES NON NÉGOCIABLES RENDUES ICI :
+     · Le bot ANNONCE AVANT d'appliquer, jamais après.
+     · Le coût est écrit DANS LA PROSE au-dessus, jamais dans un libellé de bouton.
+     · Le seul bloc du produit contenant une zone en LECTURE SEULE.
+     · Aucun button-primary : le produit ne pousse ni à le faire ni à y renoncer.
+   LA SPINE L'EMPORTE SUR CETTE MAQUETTE EN CAS DE CONFLIT.
+   ============================================================ */
+:root{
+  --surface-base:#0B1220; --surface-raised:#111C2E; --surface-raised-hover:#1E314E;
+  --surface-overlay:#18263C; --surface-user:#1B2C46;
+  --ink-primary:#E8EDF5; --ink-secondary:#94A3B8; --ink-disabled:#55677F;
+  --accent:#2DD4A7;
+  --border-interactive:#6B82A6; --border-strong:#8AA0C4; --focus-ring:#7DD3FC;
+  --r-sm:8px; --r-md:12px; --r-lg:18px; --r-full:9999px;
+  --thread:45rem; --target:48px; --gutter:32px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#060A12;color:var(--ink-primary);
+  font-family:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;
+  padding:2.5rem 1rem;display:flex;flex-direction:column;align-items:center;gap:1rem}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;
+  clip:rect(0 0 0 0);white-space:nowrap;border:0}
+.caption{color:var(--ink-secondary);font-size:.875rem;line-height:1.45;max-width:52rem;text-align:center}
+.caption b{color:var(--ink-primary);font-weight:600}
+.tag{font-size:.8125rem;font-weight:500;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--ink-secondary);margin-top:1.5rem}
+
+.frame{width:100%;max-width:70rem;background:var(--surface-base);
+  border:1px solid var(--border-interactive);border-radius:12px;overflow:hidden;
+  display:flex;flex-direction:column}
+.bar{flex:none;display:flex;align-items:center;gap:.5rem;padding:.5rem .875rem;
+  border-bottom:1px solid var(--border-interactive);background:#080E1A}
+.bar i{width:10px;height:10px;border-radius:50%;background:var(--border-interactive);display:block}
+.url{margin-left:.75rem;flex:1;max-width:21rem;border:1px solid var(--border-interactive);
+  border-radius:var(--r-full);padding:.25rem .875rem;font-size:.75rem;color:var(--ink-secondary)}
+
+main{flex:1;display:flex;justify-content:center;padding:2rem var(--gutter) 0}
+.column{width:100%;max-width:var(--thread)}
+.turn{margin-bottom:2rem}
+.msg-bot{font-size:1.0625rem;line-height:1.6;margin-bottom:1.5rem}
+.msg-user{background:var(--surface-user);border-radius:var(--r-lg);padding:12px 16px;
+  font-size:1.0625rem;line-height:1.6;max-width:80%;margin-left:auto;width:fit-content;
+  margin-bottom:1.5rem}
+
+/* --- components.sport-replace --- */
+.replace{background:var(--surface-raised);border:1px solid var(--border-interactive);
+  border-radius:var(--r-md);padding:16px;display:flex;flex-direction:column;gap:16px}
+/* La zone de perte est en encre PRIMAIRE : c'est ce qu'on s'apprête à détruire,
+   il n'a pas à être plus discret que le reste. */
+.loss{display:grid;gap:4px;padding-bottom:16px;border-bottom:1px solid var(--border-interactive)}
+.loss .head{font-size:.8125rem;font-weight:500;letter-spacing:.02em;text-transform:uppercase;
+  color:var(--ink-secondary);margin-bottom:4px}
+.loss .line{font-size:.875rem;line-height:1.45;color:var(--ink-primary)}
+.choices{display:flex;gap:12px;flex-wrap:wrap}
+.choices button{flex:1 1 13rem;background:transparent;border:1px solid var(--border-interactive);
+  border-radius:var(--r-sm);color:var(--ink-primary);font-family:inherit;font-size:.8125rem;
+  font-weight:500;letter-spacing:.02em;padding:12px 24px;min-height:var(--target);cursor:pointer}
+.choices button:hover{background:var(--surface-raised-hover);border-color:var(--border-strong)}
+.choices button:focus-visible{outline:3px solid var(--focus-ring);outline-offset:2px}
+
+.composer-wrap{flex:none;padding:1.5rem var(--gutter) 1.75rem;display:flex;justify-content:center}
+form{width:100%;max-width:var(--thread);background:var(--surface-overlay);
+  border:1px solid var(--border-interactive);border-radius:var(--r-lg);min-height:var(--target);
+  display:flex;align-items:flex-end;gap:.75rem;padding:.375rem .375rem .375rem 1rem}
+textarea{flex:1;background:transparent;border:0;color:var(--ink-primary);resize:none;
+  font-family:inherit;font-size:1.0625rem;line-height:1.6;padding:.6875rem 0;
+  min-height:calc(var(--target) - .75rem)}
+textarea::placeholder{color:var(--ink-secondary)}
+/* L'anneau de focus du champ est celui de tout le monde, posé SUR le champ.
+   Aucune règle outline:none nulle part — la spine l'interdit sans exception,
+   et le motif « anneau reporté sur le conteneur » l'enfreignait à la lettre. */
+textarea:focus-visible{outline:3px solid var(--focus-ring);outline-offset:2px}
+.send{flex:none;width:var(--target);height:var(--target);border-radius:var(--r-sm);
+  background:var(--surface-overlay);border:1px solid var(--border-interactive);
+  color:var(--ink-disabled);font-size:1.125rem;cursor:not-allowed}
+
+.note{max-width:52rem;display:grid;gap:.5rem}
+.note div{font-size:.875rem;line-height:1.5;color:var(--ink-secondary);
+  padding-left:1.1rem;position:relative}
+.note div::before{content:"";position:absolute;left:0;top:.5rem;width:6px;height:6px;
+  border-radius:50%;background:var(--accent)}
+.note .against::before{background:var(--ink-disabled)}
+.note b{color:var(--ink-primary);font-weight:600}
+
+@media (max-width:49em){
+  main{padding:1rem 1rem 0}
+  .composer-wrap{padding:1rem}
+  .choices button{flex:1 1 100%}
+}
+</style>
+</head>
+<body>
+
+<p class="tag">Écran 6 · v3 — le remplacement de sport (FR-3)</p>
+<p class="caption">Thomas est inscrit, son profil porte le tennis. Il demande du badminton. <b>Un profil ne porte qu'un sport à la fois</b> — cette phrase détruirait le précédent en silence si le bot l'appliquait sans rien dire.</p>
+
+<div class="frame">
+  <div class="bar"><i></i><i></i><i></i><div class="url">exaequo.fr</div></div>
+  <main>
+    <section class="column" aria-label="Conversation">
+      <h1 class="sr-only">Conversation avec Ex Aequo</h1>
+      <div class="turn">
+        <div class="msg-user"><span class="sr-only">Vous : </span>en fait j'aimerais bien trouver quelqu'un au badminton le jeudi</div>
+      </div>
+      <div class="turn">
+        <p class="msg-bot"><span class="sr-only">Ex Aequo : </span>Vous m'aviez dit tennis. Votre profil ne porte qu'un sport à la fois : si je passe au badminton, vous cessez d'être trouvable au tennis.</p>
+        <div class="replace" role="group" aria-label="Remplacer le sport de votre profil">
+          <div class="loss">
+            <p class="head">Ce que je remplace</p>
+            <p class="line">Tennis — intermédiaire</p>
+            <p class="line">Mardi, mercredi</p>
+          </div>
+          <div class="choices">
+            <button type="button">Passer au badminton</button>
+            <button type="button">Garder le tennis</button>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+  <!-- Les trois satellites live : hors du flux visuel, hors des reperes,
+       presents et vides des le premier octet, jamais demontes ni remontes.
+       Le satellite de tour est VIDE AU REPOS : on ecrit d abord, on vide
+       ensuite -- vider puis ecrire dans la meme tache serait un remplacement,
+       et aria-relevant=additions exclut text : le tour ne serait pas annonce.
+       Aucune minuterie ne s interpose depuis la v3.3. -->
+  <div class="sr-only" role="log" aria-relevant="additions" aria-atomic="false"></div>
+  <div class="sr-only" role="status" aria-atomic="true"></div>
+  <div class="sr-only" role="status"></div>
+  <div class="composer-wrap">
+    <form>
+      <label class="sr-only" for="c1">Votre message</label>
+      <textarea id="c1" rows="1" placeholder="…ou dites-le-moi autrement"></textarea>
+      <button class="send" type="submit" disabled aria-label="Envoyer">↑</button>
+    </form>
+  </div>
+</div>
+
+<div class="note">
+  <div><b>Le seul bloc du produit qui contient une zone en lecture seule.</b> Le rappel de ce qui sera perdu est rendu dans la grammaire du récapitulatif — mais il n'est pas interactif, et un filet réel le sépare des deux boutons. C'est une anatomie qui n'existe nulle part ailleurs, et elle existe parce que ce geste n'existe nulle part ailleurs non plus.</div>
+  <div><b>L'encre du rappel est PRIMAIRE, pas secondaire.</b> C'est ce qu'on s'apprête à détruire : il n'a aucune raison d'être plus discret que le reste de l'interface. Seul l'intitulé « ce que je remplace » est en encre secondaire, parce que lui n'est qu'une étiquette.</div>
+  <div><b>Le coût est dans la prose, jamais dans un libellé de bouton.</b> « Passer au badminton » ne dit pas ce qu'il coûte, et c'est délibéré : un bouton qui porte sa propre menace pousse au renoncement aussi sûrement qu'un bouton coloré pousse à l'acceptation. La phrase au-dessus le dit une fois, complètement.</div>
+  <div><b>Aucun <code>button-primary</code>, aucun préréglé.</b> Le produit ne pousse ni au remplacement ni au renoncement. Les deux issues sont légitimes et le restent visuellement.</div>
+  <div class="against"><b>Ce que la maquette ne tranche pas.</b> Le PRD porte un <code>[ASSUMPTION]</code> explicite : remplacer est <i>l'une des trois</i> issues possibles du profil mono-sport, avec refuser la seconde demande et tenir deux profils sous un même compte. Aucune des trois n'a été mesurée. Si celle-ci change, ce bloc disparaît.</div>
+</div>
+
+<p class="tag">La suite — le nouveau sport peut être vide, et ce n'est pas un refus</p>
+
+<div class="frame">
+  <div class="bar"><i></i><i></i><i></i><div class="url">exaequo.fr</div></div>
+  <main>
+    <section class="column" aria-label="Conversation">
+      <h1 class="sr-only">Conversation avec Ex Aequo</h1>
+      <div class="turn">
+        <p class="msg-bot"><span class="sr-only">Ex Aequo : </span>C'est fait : votre profil porte le badminton, intermédiaire, le jeudi. Vous n'apparaissez plus dans les recherches de tennis.</p>
+        <p class="msg-bot"><span class="sr-only">Ex Aequo : </span>Je n'ai encore personne en badminton. J'ai cherché, il n'y a rien à ce nom.</p>
+        <p class="msg-bot"><span class="sr-only">Ex Aequo : </span>Je peux enregistrer votre demande et vous prévenir si quelqu'un s'inscrit. Il me faudra une adresse pour vous joindre.</p>
+      </div>
+    </section>
+  </main>
+  <!-- Les trois satellites live : hors du flux visuel, hors des reperes,
+       presents et vides des le premier octet, jamais demontes ni remontes.
+       Le satellite de tour est VIDE AU REPOS : on ecrit d abord, on vide
+       ensuite -- vider puis ecrire dans la meme tache serait un remplacement,
+       et aria-relevant=additions exclut text : le tour ne serait pas annonce.
+       Aucune minuterie ne s interpose depuis la v3.3. -->
+  <div class="sr-only" role="log" aria-relevant="additions" aria-atomic="false"></div>
+  <div class="sr-only" role="status" aria-atomic="true"></div>
+  <div class="sr-only" role="status"></div>
+  <div class="composer-wrap">
+    <form>
+      <label class="sr-only" for="c2">Votre message</label>
+      <textarea id="c2" rows="1" placeholder="Écrivez votre réponse…"></textarea>
+      <button class="send" type="submit" disabled aria-label="Envoyer">↑</button>
+    </form>
+  </div>
+</div>
+
+<div class="note">
+  <div><b>Le remplacement est confirmé et sa conséquence répétée.</b> « Vous n'apparaissez plus dans les recherches de tennis » — la phrase a déjà été dite avant le choix ; elle est redite après, parce qu'un effet destructeur annoncé puis appliqué en silence se lit comme s'il n'avait pas eu lieu.</div>
+  <div><b>Le sport inconnu est un sport VIDE, jamais un sport refusé.</b> La liste des sports est ouverte : celui que personne n'a encore fondé reçoit la réponse d'un vivier vide, puis l'alerte différée. Le bot ne dit pas non plus que Thomas <i>fonde</i> le badminton — il cherchait un partenaire, pas un titre.</div>
+</div>
+
+</body>
+</html>
