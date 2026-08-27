@@ -1,0 +1,9 @@
+# Sortie du serveur MCP playwright — instantanés de page et logs de console,
+# régénérés à chaque session et sans rapport avec le projet.
+.playwright-mcp/
+
+# Captures de session hors projet
+todomvc-3-items.png
+
+# Réglages personnels de Claude Code
+.claude/settings.local.json
