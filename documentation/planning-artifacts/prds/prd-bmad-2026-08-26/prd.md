@@ -1,9 +1,9 @@
 ---
 title: "Ex Aequo — chatbot de mise en relation sportive"
 status: final
-version: 4
+version: 5
 created: 2026-08-26
-updated: 2026-08-27
+updated: 2026-08-30
 ---
 
 # PRD — Ex Aequo
@@ -522,15 +522,22 @@ envisagés, et restitue le résultat en langage clair.
 | Vent | rafales **supérieures à 40 km/h** |
 | Qualité de l'air | indice **ATMO ≥ 4** sur l'échelle à six degrés (*Mauvais*, *Très mauvais*, *Extrêmement mauvais*) |
 
-**La jouabilité ne s'applique qu'en extérieur.** Elle dépend du **lieu retenu** (FR-11),
-pas du sport : un tennis couvert n'est pas concerné, un cours de yoga en plein air l'est.
-Sans lieu, ou avec un lieu couvert, le bot ne parle ni de météo ni d'air.
+**La jouabilité dépend du *lieu retenu* (FR-11), pas du sport — et « couvert » ne suffit
+pas à la désactiver.** Les trois seuils ci-dessus portent sur la chaleur, le vent et
+l'air, et ne comportent **aucune notion de pluie**. Un équipement **pleinement intérieur**
+met à l'abri des trois, et lui seul désactive l'évaluation. Un équipement **extérieur
+couvert** n'abrite que de ce que le produit ne vérifie pas : il **reste soumis aux trois
+seuils**, au même titre qu'un cours de yoga en plein air. Sans lieu, aucune évaluation.
+*Précisé en v5 : la distinction n'est pas théorique, la source de terrains classe
+réellement des équipements en « extérieur couvert » (§11, QO-4).*
 
 **Conséquences testables :**
-- Pour un lieu en extérieur, un créneau dépassant l'un des trois seuils est signalé avant
+- Pour un lieu soumis aux seuils, un créneau dépassant l'un des trois est signalé avant
   que l'utilisateur le retienne.
-- Pour un lieu couvert, le bot ne mentionne aucune condition extérieure et ne propose
-  aucune alternative pour ce motif.
+- Pour un lieu **pleinement intérieur**, le bot ne mentionne aucune condition extérieure
+  et ne propose aucune alternative pour ce motif.
+- Un équipement **extérieur couvert** est traité comme un lieu en extérieur : les trois
+  seuils s'y appliquent, et le bot en parle.
 - Le bot propose une heure alternative dans la même journée, ou un autre jour, plutôt que
   de se contenter d'alerter.
 - **L'alerte informe et n'interdit pas** : le créneau initial reste retenable si
@@ -539,6 +546,18 @@ Sans lieu, ou avec un lieu couvert, le bot ne parle ni de météo ni d'air.
   faire, et aucun message ne part avant lui.
 - En l'absence d'alerte, le bot demande l'heure de la rencontre en une phrase.
 - Un créneau hors de portée des prévisions est annoncé comme tel, sans valeur inventée.
+- **Les deux horizons de prévision sont distincts, et le plus court commande.** La chaleur
+  et le vent se prévoient à une quinzaine de jours ; la qualité de l'air à environ un jour.
+  Un créneau au-delà rend les seuils qui ont pu être établis et **nomme** celui qui n'a pas
+  pu l'être ; jamais une valeur par défaut, jamais un silence.
+
+**Notes :** `[NOTE FOR PM]` **la branche « hors de portée des prévisions » est le cas
+courant pour l'air, pas l'exception.** Le produit prend des rencontres quelques jours à
+l'avance (§2.1) et l'indice ATMO ne porte qu'à environ un jour : dès le lendemain,
+l'évaluation rendra la chaleur et le vent en nommant l'air comme non établi. C'est une
+propriété du produit et non une panne, et le bot doit le dire comme telle. Si la qualité de
+l'air doit réellement peser sur le choix d'un créneau, c'est une **source à horizon plus
+long** qu'il faut, pas un correctif d'affichage.
 
 ### 5.4 Terrains
 
@@ -547,14 +566,15 @@ qu'une agglomération (§1), il n'y a pas de ville à demander. Réalise UJ-1.
 
 #### FR-11 : Proposer un lieu à Lyon
 
-Le bot propose des équipements lyonnais adaptés au sport, et précise pour chacun s'il est
-couvert ou en extérieur.
+Le bot propose des équipements lyonnais adaptés au sport, et précise pour chacun **sa
+nature** : pleinement intérieur, ou exposé aux conditions extérieures.
 
 **Conséquences testables :**
 - Les lieux proposés sont à Lyon ou dans son agglomération, et correspondent au sport de
   la demande.
-- Chaque lieu proposé indique s'il est **couvert ou en extérieur** — c'est ce qui
-  détermine si la jouabilité s'applique (FR-10).
+- Chaque lieu proposé indique **sa nature** — c'est elle qui détermine si la jouabilité
+  s'applique, selon la projection que FR-10 définit : un équipement *extérieur couvert*
+  y reste soumis, seul un équipement pleinement intérieur y échappe.
 - Le bot peut demander un secteur ou un arrondissement pour affiner, mais ne l'exige
   jamais : sans réponse, il propose quand même.
 - Un secteur donné est enregistré au profil de l'utilisateur inscrit et réutilisé la fois
@@ -564,10 +584,12 @@ couvert ou en extérieur.
 **Hors périmètre :** la réservation. `[NON-GOAL for MVP]` Le produit propose un endroit ;
 il ne réserve rien, ne connaît pas les disponibilités et ne gère aucun paiement.
 
-**Notes :** `[NOTE FOR PM]` la source des données de terrains n'est pas identifiée
-(voir [addendum.md](addendum.md), « Terrains : non tranché »). Tant qu'elle ne l'est pas,
-la seule branche de FR-11 garantie atteignable est « le bot dit qu'il n'a pas de donnée ».
-La faisabilité de cette fonctionnalité dans le périmètre MVP en dépend.
+**Notes :** `[NOTE FOR PM]` **la source des données de terrains est identifiée depuis la
+v5, et FR-11 cesse d'être un pari** (§11, QO-4) : elle s'interroge sans clé et porte
+l'attribut de nature dont FR-10 dépend autant que FR-11 — voir [addendum.md](addendum.md),
+« Terrains ». Ce que la fermeture déplace : la question n'est plus *aura-t-on des
+terrains* mais *comment la nature d'un équipement se projette sur la jouabilité*, et elle
+est tranchée sous FR-10.
 
 ### 5.5 Rencontre et agenda
 
@@ -911,9 +933,10 @@ d'apprentissage à vivier fictif ; ça ne le serait pas avec de vrais utilisate
 - **Cycle de vie d'un profil au vivier** : blocage par jour, libération, sortie définitive
   (FR-16).
 - Refus honnête et alerte différée quand il n'y a personne.
-- Vérification de la jouabilité **pour les lieux en extérieur** avant que le créneau
-  soit retenu, et heure de la rencontre fixée à ce moment.
-- Proposition d'équipements lyonnais, avec la mention couvert ou extérieur.
+- Vérification de la jouabilité **partout où les trois seuils gardent un sens** — tout lieu
+  qui n'est pas pleinement intérieur, un équipement *extérieur couvert* compris — avant que
+  le créneau soit retenu, et heure de la rencontre fixée à ce moment.
+- Proposition d'équipements lyonnais, avec leur **nature**, dont dépend la jouabilité.
 - Écriture de la rencontre dans l'agenda Google ou Outlook.
 - Vivier amorcé par les 86 profils, enrichi des utilisateurs qui créent un compte.
 - **Notification du partenaire et lien d'acceptation à usage unique** (FR-14) : une page
@@ -1011,9 +1034,14 @@ question sans qu'une renumérotation lui fasse désigner autre chose.
   inférence non vérifiée. FR-15 est retirée : le niveau n'est plus inféré du tout, il est
   déclaré, et la sur-évaluation est assumée sans contrepartie (§7). La question ne se pose
   plus dans ces termes ; ce qui la remplace est QO-7.
-- **QO-4 — La source des données de terrains n'est pas identifiée** (FR-11). Tant qu'elle
-  ne l'est pas, la présence de FR-11 dans le périmètre MVP est un pari. S'y ajoute la
-  distinction couvert / extérieur, dont FR-10 dépend désormais.
+- **QO-4 — fermée en v5.** Elle demandait quelle source fournirait les données de terrains,
+  et notait que tant qu'elle manquait, la présence de FR-11 dans le périmètre MVP était un
+  pari. La source existe : le **Recensement des Équipements Sportifs** du ministère des
+  Sports, interrogeable sans clé, qui porte l'attribut de nature dont FR-10 dépend autant
+  que FR-11 (voir [addendum.md](addendum.md), « Terrains »). **Le pari est levé** — c'était
+  l'un des deux bloquants de phase recensés depuis la première rédaction. Ce que la
+  fermeture a fait apparaître à sa place n'est pas une question mais un arbitrage, traité
+  sous FR-10 : « couvert » ne veut pas dire « à l'abri des trois seuils ».
 - **QO-5 — Aucun critère ne mesure la qualité d'une rencontre**, seulement son existence.
   Le signal d'équilibre après rencontre est écarté du périmètre (§9) ; tant qu'il manque,
   le produit ne peut pas savoir s'il tient sa promesse. **Aggravée en v2** par le retrait
@@ -1068,7 +1096,8 @@ question sans qu'une renumérotation lui fasse désigner autre chose.
   active s'étant révélée sans porte de sortie exécutable. Jamais posée sous forme
   numérotée non plus : aucun `QO-n` consommé.
 - *Les seuils de jouabilité* — 28 °C ressentis, 40 km/h de rafales, indice ATMO ≥ 4, et
-  seulement en extérieur (FR-10).
+  seulement là où ils gardent un sens : tout lieu qui n'est pas pleinement intérieur, un
+  équipement *extérieur couvert* compris (FR-10, précisé en v5).
 - *Le ton du bot* — vouvoiement, sympathique mais professionnel. Voir
   [EXPERIENCE.md](../../ux-designs/ux-bmad-2026-08-26/EXPERIENCE.md), *Voice and Tone*.
 - *Les 86 personnes sont-elles contactées pour de bon ?* — **oui**, par un SMS
@@ -1119,68 +1148,77 @@ raison. **Un identifiant retiré — exigence, critère, question — n'est jama
   elle-même ajouté de la matière — il a fallu une resynchronisation de plus pour s'en
   apercevoir.
 
-### v4 — 2026-08-27
+### v5 — 2026-08-30
 
-Origine : passe `bmad-ux` v3.4, consignée dans
+Origine : passe `bmad-architecture` du 2026-08-28, dont le §8 de
+[SOLUTION-DESIGN.md](../../architecture/architecture-bmad-2026-08-28/SOLUTION-DESIGN.md)
+renvoie trois points en amont. **Première fois qu'une décision remonte depuis
+l'architecture** ; les trois versions précédentes venaient toutes de la conception
+d'interface.
+
+**« Couvert » ne veut pas dire « à l'abri » (FR-10).** La source de terrains classe des
+équipements en *extérieur couvert*, et les trois seuils de FR-10 — chaleur, rafales, air —
+ne comportent **aucune notion de pluie**. « Un tennis couvert n'est pas concerné » était juste
+sur son exemple et faux sur sa règle : appliqué à un équipement extérieur couvert, il
+désactivait la jouabilité là où elle reste pertinente, au moment précis où le produit dit
+s'occuper de la santé de quelqu'un. Seul un équipement **pleinement intérieur** la désactive.
+
+**La correction touchait sept endroits, pas un.** Le point renvoyé ne signalait que le
+paragraphe de FR-10 ; la même affirmation vivait aussi dans une conséquence testable de
+FR-10, à deux endroits de FR-11, sur deux lignes du §9, dans une question fermée du §11 et à
+deux endroits de l'addendum. N'en corriger qu'un aurait laissé six occurrences dire l'inverse
+— le mode d'échec que ce journal existe pour empêcher.
+
+**QO-4 est fermée (FR-11).** La source des données de terrains est identifiée et porte
+l'attribut de nature dont FR-10 dépend autant que FR-11. Le `[NOTE FOR PM]` du §5.4 qui
+limitait FR-11 à sa branche « pas de donnée » tombe : **la présence de FR-11 dans le périmètre
+MVP cesse d'être un pari**, l'un des deux bloquants de phase ouverts depuis la première
+rédaction.
+
+**L'horizon de l'air (FR-10).** La qualité de l'air se prévoit à environ un jour, la chaleur
+et le vent à une quinzaine. La branche « hors de portée des prévisions », que FR-10 tenait
+pour un cas limite, devient le **cas courant pour l'air** dès que la rencontre est à plus
+d'un jour — l'usage même que décrit le §2.1. C'est une propriété du produit, pas une panne ;
+et si l'air doit réellement peser sur le choix d'un créneau, il faut une **source à horizon
+plus long**, pas un correctif d'affichage.
+
+**Autres changements.** §9 : la jouabilité couvre tout lieu qui n'est pas pleinement
+intérieur. §11 : QO-4 garde son numéro et sa place selon le précédent de QO-3, et la question
+fermée sur les seuils est précisée. **QO-6 n'a pas bougé** — l'architecture a posé une colonne
+de dernière activité qu'elle ne lit jamais ; le seuil et son usage restent du produit. Aucun
+identifiant réattribué, aucune exigence ajoutée ni retirée.
+
+**Porté depuis l'aval / ajouté en le portant.** *Porté* : la projection de la nature du lieu,
+la fermeture de QO-4, l'écart des horizons. *Ajouté, donc à redescendre* : la portée réelle
+de la correction — six occurrences que l'aval ne signalait pas — et l'implication produit de
+l'horizon de l'air, que l'architecture nommait comme une limite de fait sans en tirer la
+conséquence. **Reliquat de la v4, soldé :** l'observation « cinq états de lien contre sept
+états de page » est fermée par AD-10.
+
+### v4 — 2026-08-27 *(résumé)*
+
+Origine : passe `bmad-ux` v3.4, consignée dans
 [decisions-2026-08-27-statut-abandonnee.md](decisions-2026-08-27-statut-abandonnee.md).
-**Troisième décision de produit fermée dans un document de conception d'interface** — et
-cette fois elle n'y a même pas été cherchée : elle est tombée d'une vérification de
-routine, dix-huit minutes après la clôture de la v3.
-
-**Un cinquième statut de rencontre : *abandonnée* (FR-13).** La v3 promettait qu'abandonner
+**Un cinquième statut de rencontre : *abandonnée* (FR-13).** La v3 promettait qu'abandonner
 la rencontre en cours la fasse passer « par ses statuts ordinaires, jamais par un cinquième
-état ». **Aucun des quatre ne pouvait recevoir un abandon** : tous décrivent la réponse du
-partenaire. Router l'abandon vers *déclinée* aurait fait dire au bot qu'une personne **a
-refusé** alors qu'elle n'avait rien répondu ; vers *expirée*, qu'une échéance était passée
-alors que rien ne l'était. Dans un produit dont le §7 tient « le bot n'invente rien » pour
-sa contrainte **la plus structurante**, la phrase n'était pas imprécise : elle était
-**inexécutable**.
-
-**Et le trou désarmait la règle qui l'avait créé.** Sans statut d'arrivée, la rencontre
-reste *en attente* ; *jour libéré* (FR-16) n'écoutant que *déclinée* et *expirée*, le jour
-reste bloqué ; la règle d'une seule recherche mordant sur les rencontres *en attente*, la
-nouvelle recherche reste refusée — **pour toujours**. La sortie que le bot promet dans sa
-propre phrase contractuelle n'existait pas. Le cinquième statut **n'assouplit la règle
-d'aucun pouce** : il la rend applicable. Son nom suit le vocabulaire déjà posé des deux
-côtés — le PRD écrivait « abandonner », la microcopie dit « laisser tomber » ; *annulée* et
-*retirée* ont été écartées.
-
-**Personne n'est prévenu, et c'est délibéré (FR-13, FR-14).** Ni courriel à l'utilisateur —
-il vient de demander l'abandon, l'en informer serait lui apprendre ce qu'il vient de faire,
-l'événement d'agenda restant mis à jour — ni message au partenaire : un état terminal de
-plus sur la page d'acceptation l'annonce à qui rouvre son lien. Le motif est un invariant
-que le produit s'impose déjà, **le SMS est le seul contact qu'un profil d'amorçage aura
-jamais avec Ex Aequo**, et le rompre pour annoncer un abandon le romprait pour la population
-**majoritaire** du vivier, au profit de gens qui n'avaient rien fait. Ce que ça coûte — le
-partenaire d'une rencontre confirmée ne l'apprend qu'en rouvrant son lien — devient
-**QO-9** au lieu de rester tacite.
-
-**Deux points où le fichier de décisions a été dépassé.** *Une correction*, la deuxième de
-suite : il tenait « aucun cinquième état » pour encore juste dans le cas du changement de
-créneau, alors que ce passage emploie lui-même le verbe *abandonner* ; la clause meurt aux
-**trois** endroits où elle se trouvait, l'entrée v3 de ce journal comprise, et ce qui
-survit est son intention — **changer de créneau n'est pas un cas particulier**. *Un
-arbitrage* : le cinquième statut est **uniforme**, un simple décalage d'heure produit lui
-aussi une rencontre *abandonnée*. Exempter ce cas réintroduisait le cas particulier que la
-v3 avait fermé ; le prix est écrit en `[NOTE FOR PM]` sous FR-13 plutôt que découvert.
-
-**Autres changements.**
-
-- **§3** — *Rencontre* passe à **cinq** valeurs. *Recherche active* n'a **pas** bougé :
-  ancrée en v3 sur les deux statuts bloquants, elle exclut *abandonnée* **par
-  construction** — dividende de la correction faite en v3.
-- **FR-16** — *abandonnée* libère le jour immédiatement, **pour les deux profils**.
-- **§11** — **QO-9**, quatrième endroit laissé sans instrument après le signal d'équilibre
-  (§9), SM-C1 (§10) et QO-8. *Que devient une rencontre que son demandeur abandonne ?*
-  rejoint les questions fermées sans consommer de numéro.
-- **FR-9 et la règle d'une seule recherche sont intactes.**
-
-**Porté depuis l'aval / ajouté en le portant.** *Porté* : le cinquième statut, son nom, le
-silence des deux côtés, l'état terminal, la libération du jour. *Ajouté, donc à
-redescendre* : **rien** — les spines v3.4 traitent déjà le changement de créneau par
-*abandonnée* sans exception, et QO-9 ne change aucune surface. **Reliquat de la v3, soldé :**
-le désaccord *demande active* / *recherche active* est corrigé dans le corps des deux
-spines ; l'architecture et le découpage en épiques peuvent les citer.
+état ». Aucun des quatre ne pouvait recevoir un abandon : tous décrivent la réponse du
+partenaire, et router l'abandon vers *déclinée* aurait fait dire au bot qu'une personne
+**a refusé** alors qu'elle n'avait rien répondu ; vers *expirée*, qu'une échéance était
+passée alors que rien ne l'était. La phrase n'était pas imprécise, elle était
+**inexécutable** — et le trou désarmait la règle qui l'avait créé : sans statut d'arrivée,
+la rencontre restait *en attente*, le jour restait bloqué et la nouvelle recherche restait
+refusée pour toujours. Le cinquième statut n'assouplit la règle d'aucun pouce, il la rend
+applicable. **L'arbitrage retenu le rend uniforme** — un simple décalage d'heure produit lui
+aussi une rencontre *abandonnée* ; exempter le changement de créneau réintroduisait le cas
+particulier que la v3 avait fermé. **Personne n'est prévenu, et c'est délibéré** (FR-13,
+FR-14) : ni courriel à l'utilisateur, qui vient de demander l'abandon, ni message au
+partenaire, parce que **le SMS est le seul contact qu'un profil d'amorçage aura jamais avec
+Ex Aequo** ; un état terminal de plus sur la page d'acceptation l'annonce à qui rouvre son
+lien, et ce que ce silence coûte devient **QO-9**. Aussi : *rencontre* passe à cinq valeurs
+au §3, *recherche active* n'a **pas** bougé, **FR-16** fait libérer le jour par *abandonnée*
+immédiatement et **pour les deux profils**, et ce journal adopte ses deux conventions de
+tenue. Deuxième correction de suite d'un fichier de décisions : la clause « aucun cinquième
+état » meurt aux **trois** endroits où elle se trouvait, et non au seul signalé.
 
 ### v3 — 2026-08-27 *(résumé)*
 

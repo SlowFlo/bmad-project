@@ -2,7 +2,7 @@
 title: "Addendum — matière technique et décisions hors PRD"
 status: living
 created: 2026-08-26
-updated: 2026-08-26
+updated: 2026-08-30
 ---
 
 # Addendum
@@ -151,7 +151,7 @@ vérité et s'enrichit des utilisateurs qui passent par le chatbot.
 |---|---|---|
 | Agenda | Google Calendar **et** Outlook / Microsoft Graph | Deux parcours OAuth distincts ; « Sign in with Google / Microsoft » peut servir à la fois l'identité et l'accès agenda |
 | Météo | API météo + **indice ATMO** | Le besoin dépasse la pluie : chaleur ressentie, rafales, qualité de l'air — voir ci-dessous |
-| Terrains | Non tranché — **périmètre réduit à Lyon** | Statut dans le MVP à confirmer — voir ci-dessous |
+| Terrains | **Data ES** — Recensement des Équipements Sportifs du ministère des Sports, API Opendatasoft Explore v2.1, sans clé | **Tranché en v5.** Porte `equip_nature` et `aps_name`, les deux champs dont FR-11 et FR-10 dépendent. Dans le périmètre MVP — voir ci-dessous |
 | E-mail sortant | Fournisseur d'envoi transactionnel | Deux usages : l'alerte différée de FR-9 et la notification de confirmation de FR-13. L'adresse vient de la connexion Google / Microsoft : ni saisie, ni vérification à prévoir |
 | SMS sortant | Fournisseur d'envoi SMS | Sert FR-14. Chaque message a un coût réel : prévoir une limite de débit et un garde-fou contre les envois en boucle. Filtre de destinataire obligatoire — voir ci-dessous |
 | Lien d'acceptation | Page web hors conversation | Sert FR-14. Seule surface du produit qui vit en dehors du fil ; le jeton et ses états sont décrits en « Persistance » |
@@ -164,20 +164,33 @@ la qualité de l'air, et fixe le seuil sur l'échelle ATMO à six degrés, ≥ 4
 *Conséquences pour l'architecture :*
 
 - Pour Lyon, c'est ATMO Auvergne-Rhône-Alpes qui fait foi.
-- Un lieu couvert n'appelle aucune requête : la jouabilité ne s'applique qu'en extérieur.
+- **Seul un équipement pleinement intérieur n'appelle aucune requête.** Un équipement
+  *extérieur couvert* reste soumis aux trois seuils, qui ne comportent aucune notion de
+  pluie : le classer « couvert » désactiverait la jouabilité là où elle reste pertinente.
+  La projection de la nature du lieu vers un booléen *jouabilité applicable* est une règle
+  de domaine, pas un détail d'adaptateur. **Corrigé en v5** — la formulation antérieure
+  disait l'inverse.
+- **Deux ports séparés, aux horizons déclarés distincts.** La chaleur ressentie et les
+  rafales se prévoient à une quinzaine de jours ; l'indice ATMO à environ un. Un appel
+  « météo » unique effacerait en silence un écart d'un ordre de grandeur et produirait soit
+  un trou muet, soit une valeur inventée. Le créneau hors de portée de l'un des deux emprunte
+  la branche que FR-10 prévoit déjà, en **nommant** le seuil non établi.
 
-### Terrains : non tranché
+### Terrains : tranché en v5
 
-Le statut de cette intégration dans le MVP reste à confirmer. Le PRD porte un
-`[NOTE FOR PM]` en §5.4 : tant que la source n'est pas identifiée, FR-11 n'est garanti que
-sur sa branche « pas de donnée ».
+La source est **Data ES**, le Recensement des Équipements Sportifs du ministère des Sports,
+interrogeable anonymement en une requête. **QO-4 est fermée** et FR-11 cesse d'être un pari :
+le `[NOTE FOR PM]` du §5.4 qui limitait l'exigence à sa branche « pas de donnée » est retiré.
 
 *Conséquences pour l'architecture :*
 
-- La source doit fournir l'attribut **couvert / extérieur**, dont FR-10 dépend : sans lui,
-  la jouabilité n'est pas calculable.
-- Une ville unique rend envisageable, en repli, la saisie manuelle des principaux
-  équipements.
+- La source porte les deux champs dont le produit dépend : `equip_nature` pour la nature de
+  l'équipement, `aps_name` pour l'activité pratiquée.
+- **`equip_nature` n'est pas un booléen**, et c'est la découverte qui a produit une règle :
+  la valeur observée est « Extérieur couvert ». La projection vers *jouabilité applicable*
+  vit donc dans le domaine et se décide sur la lettre de FR-10 — trois seuils, pas de pluie.
+- Le filtrage lyonnais se fait à l'interrogation ; une ville unique garde par ailleurs
+  envisageable, en repli, la saisie manuelle des principaux équipements.
 
 ### SMS — filtre de destinataire
 

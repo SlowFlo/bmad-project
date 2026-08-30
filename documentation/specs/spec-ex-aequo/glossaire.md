@@ -1,0 +1,26 @@
+# Glossaire — Ex Aequo
+
+Companion de [SPEC.md](SPEC.md). **Ce vocabulaire est contraignant** : le SPEC, les critères d'acceptation et le code l'emploient littéralement, sans synonyme, jusque dans les noms de types, de champs et de fonctions. Jamais `match`, `rendez_vous`, `booking`, `slot`.
+
+- **Données d'amorçage** — le fichier des 86 profils chargés au premier lancement. Seule étiquette employée pour ce fichier. Voir [donnees-amorcage.md](donnees-amorcage.md).
+- **Vivier** — l'ensemble des profils parmi lesquels le bot cherche. Contient des *profils d'amorçage* et des *utilisateurs inscrits*. Il grossit à chaque compte créé (CAP-3) et ne diminue que par une **sortie définitive** demandée depuis un message (CAP-13). Un profil n'en sort pas parce qu'il a joué : ce qu'une rencontre produit est un *jour bloqué* (CAP-14).
+- **Profil d'amorçage** — un des 86 profils issus des *données d'amorçage*. Porte un prénom, un nom, un téléphone, un sport, des *jours disponibles* et un *niveau*. N'a ni compte, ni adresse électronique, ni ville. **Ne parle jamais au bot** — mais peut accepter une rencontre en suivant le lien de son message.
+- **Utilisateur inscrit** — une personne qui a parlé au bot et créé un compte. Son profil porte un prénom, l'adresse du compte, **un sport** avec son *niveau* et ses *jours disponibles*, et facultativement un secteur de Lyon et un numéro de téléphone. Joignable par courriel, et susceptible de répondre.
+- **Partenaire** — la personne que le bot propose : quelqu'un avec qui pratiquer le même sport. Un adversaire au tennis, un binôme en escalade, un partenaire de rythme en course à pied, quelqu'un au même cours de yoga. **Pas nécessairement un adversaire** — le mot « adversaire » est interdit hors sport de duel.
+- **Candidat** — un profil du vivier que la recherche a retenu et que le bot présente, avant que l'utilisateur en retienne un. Un candidat retenu devient un *partenaire*.
+- **Niveau** — Débutant, Intermédiaire ou Avancé. **Valeur déclarée par la personne, demandée une fois, jamais vérifiée.** Retenue telle quelle si la personne a employé l'un des trois mots ; sinon les trois choix lui sont ouverts (CAP-2). Jamais inférée d'autre chose, jamais corrigée ensuite. Un profil dont la personne a refusé de répondre porte un **niveau inconnu**, qui n'est pas une quatrième valeur mais une absence : ce profil ne sort d'aucune recherche et ne peut pas non plus chercher.
+- **Jour bloqué** — un jour de la semaine pendant lequel un profil cesse d'être renvoyé par les recherches, parce qu'une *rencontre* y est posée. Le blocage porte sur ce jour seul, jamais sur le profil entier (CAP-14).
+- **Jour disponible** — un jour de la semaine, sans heure. Le vocabulaire des *données d'amorçage* et des profils.
+- **Demande** — ce que l'utilisateur exprime : un sport, un ou plusieurs jours, un niveau.
+- **Élargissement** — la relaxation d'une contrainte de la *demande* pour obtenir des *candidats* quand la recherche exacte ne renvoie rien. Le produit n'en connaît qu'un : le jour.
+- **Créneau** — un jour et une heure précise, proposés pour une *rencontre*. Le jour vient de la *demande* et des *jours disponibles* ; l'heure est fixée en fin de conversation et n'existe nulle part dans le vivier.
+- **Rencontre** — un *créneau* retenu entre l'utilisateur et un *partenaire*, dans un lieu donné. Elle porte un statut et un seul : **en attente**, **confirmée**, **déclinée**, **expirée** ou **abandonnée**. Voir [statuts-rencontre.md](statuts-rencontre.md). C'est le seul mot pour cet objet : ni « rendez-vous », ni « match ».
+- **Recherche active** — une *demande* qui a produit une *rencontre* encore **en attente** ou **confirmée**. Une demande qui n'a produit aucune rencontre — faute de candidat, ou parce qu'elle est devenue une *alerte différée* — n'est **jamais** active. Une personne n'en porte **qu'une seule à la fois**, et seules comptent les rencontres nées de ses propres demandes : être sollicité par quelqu'un d'autre n'occupe pas la place.
+- **Retenir un créneau** — le geste par lequel l'utilisateur arrête un *créneau* et déclenche la mise en relation. C'est **le seul geste du produit qui engage quelqu'un d'autre** : à partir de là un message part vers le *partenaire* et la *rencontre* existe. **Rien n'est retenu tant qu'il n'a pas eu lieu.**
+- **Jouabilité** — l'appréciation des conditions extérieures d'un *créneau* : température ressentie, vent, qualité de l'air. Elle dépend du **lieu retenu**, jamais du sport, et ne s'applique qu'en extérieur — un équipement *extérieur couvert* y reste soumis, les trois seuils ne comportant aucune notion de pluie.
+
+## Identifiants hérités
+
+Les identifiants `FR-n`, `SM-n` et `QO-n` du PRD sont conservés tels quels dans ce contrat, pour que les documents amont et aval restent citables sans renumérotation. **Un identifiant retiré n'est jamais réattribué** : `FR-7` (élargissement au niveau voisin), `FR-15` (établissement du niveau par des faits) et `SM-C1` (contre-métrique de descente de niveau) sont retirés ; `QO-3` et `QO-4` sont fermées.
+
+Le contrat introduit ses propres identifiants `CAP-n`, stables et jamais réattribués, chacun citant le `FR-n` dont il dérive. Les invariants d'architecture sont cités par leur identifiant `AD-n` et vivent dans `ARCHITECTURE-SPINE.md`.
