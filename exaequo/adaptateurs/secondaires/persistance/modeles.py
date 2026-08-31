@@ -18,6 +18,7 @@ from sqlalchemy import (
     DateTime,
     Enum,
     ForeignKey,
+    Index,
     String,
     TypeDecorator,
     UniqueConstraint,
@@ -119,6 +120,15 @@ class ProfilORM(Base):
             "OR (cle_amorcage IS NOT NULL)",
             name="ck_profil_amorcage_porte_sa_cle",
         ),
+        #: « Chercher les profils d'un sport » est l'accès central de la recherche
+        #: (DW-1) : SQLite n'indexe pas les clés étrangères, et sans cet index il
+        #: balaie `profil` à chaque recherche.
+        #:
+        #: **Composite, et dans cet ordre** : `sport_id` sert la jointure, `id` sert
+        #: le `ORDER BY profil.id` qui la suit — l'*ordre du vivier*, dont 2.3 a
+        #: besoin pour départager les ex æquo. Sur le seul `sport_id`, SQLite
+        #: retrouve bien les lignes mais les retrie dans un `USE TEMP B-TREE`.
+        Index("ix_profil_sport_id", "sport_id", "id"),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True)

@@ -158,6 +158,25 @@ class DepotVivier:
         lignes = self._session.scalars(select(ProfilORM).order_by(ProfilORM.id)).all()
         return [self._vers_profil(ligne) for ligne in lignes]
 
+    def profils_du_sport(self, cle_sport: str) -> list[Profil]:
+        """Tous les profils d'une **clé de sport**, dans l'ordre du vivier (`PortVivier`).
+
+        Le dépôt **rétrécit, il ne filtre pas** : ni le niveau inconnu, ni la sortie du
+        vivier, ni le demandeur n'écartent quoi que ce soit ici — ces exclusions sont
+        des règles, et elles vivent dans `domaine.recherche`.
+
+        La jointure porte sur `sport.cle`, jamais sur le libellé, et la table de
+        synonymes n'est **pas** consultée : elle ne redirige qu'à l'écriture (AD-5).
+        Une clé inconnue rend une liste vide, jamais une exception.
+        """
+        lignes = self._session.scalars(
+            select(ProfilORM)
+            .join(SportORM, SportORM.id == ProfilORM.sport_id)
+            .where(SportORM.cle == cle_sport)
+            .order_by(ProfilORM.id)
+        ).all()
+        return [self._vers_profil(ligne) for ligne in lignes]
+
     def inserer_profil(
         self,
         *,

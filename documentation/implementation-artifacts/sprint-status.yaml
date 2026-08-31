@@ -1,0 +1,112 @@
+# STATUS DEFINITIONS:
+# ==================
+# Epic Status:
+#   - backlog: Epic not yet started
+#   - in-progress: Epic actively being worked on
+#   - done: All stories in epic completed
+
+# Story Status:
+#   - backlog: Story only exists in epic file
+#   - ready-for-dev: Story file created, ready for development
+#   - in-progress: Developer actively working on implementation
+#   - review: Implementation complete, ready for review
+#   - done: Story completed
+
+# Retrospective Status:
+#   - optional: Can be completed but not required
+#   - done: Retrospective has been completed
+
+# Action Item Status:
+#   - open: Committed during a retrospective, not yet addressed
+#   - in-progress: Actively being worked on
+#   - done: Completed
+
+# WORKFLOW NOTES:
+# ===============
+# - Epic transitions to 'in-progress' automatically when its first story starts (via build's sprint sync)
+# - Stories can be worked in parallel if team capacity allows
+# - Developer typically creates the next story after the previous one is 'done' to incorporate learnings
+# - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
+# - Retrospective appends its action items to action_items; the status view surfaces open ones
+generated: 08-31-2026 11:00
+last_updated: 08-31-2026 16:32
+project: Ex Aequo
+project_key: NOKEY
+tracking_system: file-system
+story_location: documentation/implementation-artifacts
+development_status:
+  epic-1: done
+  1-1-le-vivier-existe-et-se-recharge-sans-se-dupliquer: done
+  epic-1-retrospective: optional
+
+  epic-2: in-progress
+  2-1-chercher-des-candidats-du-niveau-exact: review
+  2-2-élargir-sur-le-jour-et-sur-lui-seul: backlog
+  2-3-ordonner-et-plafonner-les-candidats: backlog
+  2-4-mesurer-sm-3-sur-les-231-combinaisons: backlog
+  2-5-aucun-élargissement-de-niveau-à-aucune-étape: backlog
+  epic-2-retrospective: optional
+
+  epic-3: backlog
+  3-1-le-fil-à-froid-ouvert-sans-authentification: backlog
+  3-2-un-tour-de-parole-du-message-posté-au-flux-d-événements: backlog
+  3-3-les-lignes-d-étape-émises-par-les-ports-et-non-par-le-modèle: backlog
+  3-4-le-chemin-sonore-trois-satellites-qui-ne-se-taisent-jamais: backlog
+  3-5-extraire-une-demande-du-langage-naturel: backlog
+  3-6-déclarer-son-niveau-ou-refuser-de-le-dire: backlog
+  3-7-rendre-les-candidats-dans-le-fil: backlog
+  3-8-annoncer-un-vivier-vide-sans-broder: backlog
+  3-9-le-passé-est-inerte-et-le-fil-ne-se-réécrit-pas: backlog
+  3-10-reprendre-une-conversation: backlog
+  3-11-les-pannes-dites-sans-excuse-et-sans-couleur: backlog
+  3-12-les-interdits-du-fil: backlog
+  3-13-le-plancher-de-perception-et-ce-que-le-bot-restitue: backlog
+  epic-3-retrospective: optional
+
+  epic-4: backlog
+  4-1-se-connecter-avec-google-ou-microsoft: backlog
+  4-2-revenir-d-oauth-au-même-endroit: backlog
+  4-3-entrer-au-vivier-à-la-création-du-compte: backlog
+  4-4-remplacer-son-sport-annoncé-avant-d-être-appliqué: backlog
+  4-5-le-compte-n-est-jamais-demandé-avant-le-geste-qui-engage: backlog
+  epic-4-retrospective: optional
+
+  epic-5: backlog
+  5-1-les-cinq-statuts-et-leurs-effets-attachés-aux-arêtes: backlog
+  5-2-retenir-un-créneau-en-une-seule-transaction: backlog
+  5-3-dériver-le-jour-bloqué-symétriquement: backlog
+  5-4-une-seule-recherche-active-côté-demandeur-seulement: backlog
+  5-5-abandonner-une-rencontre: backlog
+  5-6-expirer-les-rencontres-et-rendre-les-jours: backlog
+  epic-5-retrospective: optional
+
+  epic-6: backlog
+  6-1-filtrer-les-destinataires-avant-tout-envoi: backlog
+  6-2-la-boîte-d-envoi-persiste-tout-message-sortant: backlog
+  6-3-l-adaptateur-réel-honore-le-contrat-portenvois: backlog
+  6-4-prévenir-le-partenaire-par-un-message-qui-explique-d-où-il-s: backlog
+  6-5-la-page-d-acceptation-et-ses-sept-états: backlog
+  6-6-sortir-définitivement-du-vivier: backlog
+  epic-6-retrospective: optional
+
+  epic-7: backlog
+  7-1-proposer-un-lieu-lyonnais-adapté-au-sport: backlog
+  7-2-projeter-la-nature-d-un-équipement-vers-jouabilité-applicabl: backlog
+  7-3-évaluer-les-trois-seuils: backlog
+  7-4-deux-horizons-distincts-et-le-plus-court-commande: backlog
+  7-5-contre-proposer-une-heure-sans-rien-retenir: backlog
+  epic-7-retrospective: optional
+
+  epic-8: backlog
+  8-1-choisir-son-fournisseur-et-consentir-à-l-écriture: backlog
+  8-2-écrire-la-rencontre-sans-aucun-numéro: backlog
+  8-3-mettre-à-jour-l-événement-à-chaque-changement-de-statut: backlog
+  8-4-un-agenda-indisponible-n-annule-jamais-la-rencontre: backlog
+  epic-8-retrospective: optional
+
+  epic-9: backlog
+  9-1-poser-une-alerte-quand-le-vivier-est-vide: backlog
+  9-2-déclencher-sur-correspondance-exacte-à-l-écriture-d-un-profi: backlog
+  9-3-annuler-une-alerte-depuis-la-conversation: backlog
+  9-4-expirer-une-alerte-à-60-jours: backlog
+  epic-9-retrospective: optional
