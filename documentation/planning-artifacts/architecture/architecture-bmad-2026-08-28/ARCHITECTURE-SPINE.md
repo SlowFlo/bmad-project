@@ -7,7 +7,7 @@ paradigm: 'hexagonal (ports et adaptateurs) — le LLM est un adaptateur, pas le
 scope: "Le chatbot web de mise en relation sportive Ex Aequo, dans son périmètre MVP : le fil du demandeur, le noyau de règles, la page d'acceptation du partenaire, et les cinq intégrations tierces."
 status: final
 created: '2026-08-28'
-updated: '2026-08-28'
+updated: '2026-08-31'
 binds:
   - FR-1
   - FR-2
@@ -99,10 +99,21 @@ Une flèche se lit « importe ». Le domaine n'en émet aucune : il déclare des
   interrogées*), NFR de latence
 - **Prevents:** qu'une étape annoncée ne corresponde à aucun appel réel, et qu'un appel en
   échec reste affiché sans démenti.
-- **Rule:** chaque port secondaire émet un événement `etape` à l'entrée et à la sortie de
-  l'appel, portant le service et son sort. Le modèle ne dispose d'aucun outil lui permettant
-  d'émettre une étape. Corollaire tenu gratuitement : le signe de vie part au premier appel
-  d'outil, avant le premier jeton du modèle.
+- **Rule:** chaque port **qui peut échouer d'une façon que la personne doit connaître** émet un
+  événement `etape` à l'entrée et à la sortie de l'appel, portant le service et son sort. Cinq
+  ports satisfont ce critère : `meteo`, `air`, `lieux`, `agenda` et `envois` — ce dernier parce
+  que le filtre de destinataire échoue bruyamment par conception (FR-14) et que ne pas avoir pu
+  prévenir le partenaire est une conséquence que le produit s'inflige, donc qu'il écrit.
+  `persistance` n'émet pas : son échec n'est pas un fait mais un **défaut**, au sens de la
+  section *Consistency Conventions*. Le modèle ne dispose d'aucun outil lui permettant d'émettre
+  une étape. Corollaire tenu gratuitement : le signe de vie part au premier appel d'outil, avant
+  le premier jeton du modèle.
+
+  > *Corrigé le 2026-08-31.* La règle disait « chaque **port secondaire** », là où le SPEC
+  > (CAP-16, *intent*) disait « chaque **appel externe** » — deux listes différentes, la
+  > persistance et la boîte d'envoi étant des ports secondaires **locaux**. Deux constructeurs
+  > conformes produisaient deux fils incompatibles. Le critère est désormais énoncé par principe
+  > plutôt que par répertoire, ce qui ferme le cas limite au lieu de l'arbitrer à chaque fois.
 
 ### AD-4 — Un flux SSE par tour, à événements typés
 

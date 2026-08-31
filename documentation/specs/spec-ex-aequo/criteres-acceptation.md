@@ -170,7 +170,8 @@ Le détail — les cinq statuts, la table des transitions et de leurs effets, la
 
 ## CAP-16 — Rendre le travail du bot visible
 
-- Chaque port secondaire émet un événement d'étape à **l'entrée et à la sortie** de l'appel, portant le service et son sort.
+- Chaque port **qui peut échouer d'une façon que la personne doit connaître** émet un événement d'étape à **l'entrée et à la sortie** de l'appel, portant le service et son sort. Cinq ports satisfont ce critère : `meteo`, `air`, `lieux`, `agenda` et `envois` — ce dernier parce que le filtre de destinataire échoue bruyamment (CAP-13). `persistance` n'émet pas : son échec est un **défaut**, pas un fait.
+  > *Corrigé le 2026-08-31.* Ce critère disait « chaque **port secondaire** » et l'*intent* de CAP-16 disait « chaque **appel externe** » — deux listes différentes, la persistance et la boîte d'envoi étant des ports secondaires **locaux**. Les deux formulations sont remplacées par le critère de principe, aligné sur AD-3.
 - **Le signe de vie part au premier appel d'outil, avant le premier jeton du modèle**, et dans tous les cas en moins de 2 secondes. La réponse complète arrive en moins de 20 secondes ; au-delà, le bot dit ce qu'il fait et pourquoi c'est long.
 - **Le modèle ne dispose d'aucun outil lui permettant d'émettre une étape.** Quand le bot dit qu'il regarde la météo, il la regarde.
 - Une source qui n'a pas répondu est **annoncée comme telle**, nommément, et l'absence de sa donnée dans la réponse devient cohérente au lieu d'être suspecte.

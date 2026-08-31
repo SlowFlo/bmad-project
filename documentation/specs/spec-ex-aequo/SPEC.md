@@ -92,7 +92,7 @@ Les conséquences testables de chaque capacité vivent dans [criteres-acceptatio
 
 - **CAP-16** *(PRD §7, AD-3)*
   - **intent:** Pendant que le bot travaille, l'utilisateur voit quelles sources sont réellement interrogées et le sort de chacune.
-  - **success:** Chaque appel externe émet une étape à l'entrée et à la sortie, portant le service et son sort ; le signe de vie part au premier appel d'outil, avant le premier jeton du modèle ; une source en échec est annoncée nommément, ce qui rend cohérente l'absence de sa donnée dans la réponse ; le modèle ne dispose d'aucun moyen d'émettre une étape lui-même.
+  - **success:** Chaque port qui peut échouer d'une façon que la personne doit connaître émet une étape à l'entrée et à la sortie, portant le service et son sort ; le signe de vie part au premier appel d'outil, avant le premier jeton du modèle ; une source en échec est annoncée nommément, ce qui rend cohérente l'absence de sa donnée dans la réponse ; le modèle ne dispose d'aucun moyen d'émettre une étape lui-même.
 
 ## Constraints
 

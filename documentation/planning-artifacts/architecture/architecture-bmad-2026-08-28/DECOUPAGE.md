@@ -2,7 +2,7 @@
 title: "Ex Aequo — découpage du travail"
 status: final
 created: 2026-08-28
-updated: 2026-08-28
+updated: 2026-08-31
 spine: ./ARCHITECTURE-SPINE.md
 ---
 
@@ -122,8 +122,14 @@ sortie du vivier.
 Data ES et le filtrage lyonnais, la projection de `equip_nature`, Open-Meteo, l'API ATMO et
 son inscription, les trois seuils, les deux horizons, la contre-proposition d'heure.
 
-*Fait quand* : un lieu couvert ne déclenche aucune mention météo ; un créneau à cinq jours
-rend les deux premiers seuils et **nomme** celui qu'il n'a pas pu établir.
+*Fait quand* : un lieu **pleinement intérieur** ne déclenche aucune mention météo ; un créneau à
+cinq jours rend les deux premiers seuils et **nomme** celui qu'il n'a pas pu établir.
+
+> *Corrigé le 2026-08-31.* Ce critère disait « un lieu **couvert** ». Lu avec le vocabulaire du
+> produit, il énonçait l'inverse d'**AD-14** : « couvert » ne suffit précisément pas à désactiver
+> la jouabilité, et Data ES retourne littéralement la valeur `Extérieur couvert`. Un constructeur
+> qui n'aurait lu que ce critère aurait implémenté l'inversion que l'invariant a été écrit pour
+> empêcher — et son test serait passé.
 
 ### E8 — Agenda
 **Gouverné par :** AD-9, AD-13, AD-18
