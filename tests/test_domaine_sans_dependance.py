@@ -93,8 +93,15 @@ def test_un_import_relatif_est_resolu_en_nom_absolu() -> None:
 def test_un_import_relatif_vers_un_adaptateur_serait_refuse() -> None:
     """Garde-fou : le nom résolu doit bien tomber sous l'interdiction d'AD-1."""
     module = RACINE_DU_DOMAINE / "vivier.py"
-    assert _est_interdit(_resoudre("adaptateurs.secondaires.persistance", 2, module))
-    assert not _est_interdit(_resoudre("sports", 1, module))
+    # `_resoudre` peut rendre `None` — pour un `from . import x` sans module. Ici
+    # les deux noms sont donnés : la résolution rend toujours une chaîne, et
+    # l'affirmer le dit au vérificateur autant qu'au lecteur.
+    sortant = _resoudre("adaptateurs.secondaires.persistance", 2, module)
+    interne = _resoudre("sports", 1, module)
+    assert sortant is not None
+    assert interne is not None
+    assert _est_interdit(sortant)
+    assert not _est_interdit(interne)
 
 
 @pytest.mark.parametrize(

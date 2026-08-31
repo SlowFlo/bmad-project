@@ -3,9 +3,12 @@
 from __future__ import annotations
 
 import datetime as dt
+from pathlib import Path
+from typing import Any
 
 import pytest
-from sqlalchemy import Engine, select
+from conftest import TABLE_PROFIL
+from sqlalchemy import Engine, select, update
 from sqlalchemy.orm import Session
 
 from exaequo.adaptateurs.secondaires.persistance.base import (
@@ -14,13 +17,13 @@ from exaequo.adaptateurs.secondaires.persistance.base import (
 )
 from exaequo.adaptateurs.secondaires.persistance.depots import DepotSports, DepotVivier
 from exaequo.adaptateurs.secondaires.persistance.modeles import ProfilORM
-from exaequo.amorcage.chargement import charger_donnees_amorcage
+from exaequo.amorcage.chargement import ResultatAmorcage, charger_donnees_amorcage
 from exaequo.amorcage.lecture import ErreurDonneesAmorcage, lire_donnees_amorcage
 from exaequo.application import preparer_le_vivier
-from exaequo.domaine.vivier import Population, ProvenanceNumero
+from exaequo.domaine.vivier import Population, Profil, ProvenanceNumero
 
 
-def _charger(session: Session, chemin=None):
+def _charger(session: Session, chemin: Path | None = None) -> ResultatAmorcage:
     resultat = charger_donnees_amorcage(session, chemin)
     session.commit()
     return resultat
@@ -82,7 +85,7 @@ def test_le_chargement_se_rejoue_sans_duplication(session: Session) -> None:
 
 
 def test_le_decompte_des_deja_presents_est_l_intersection_avec_le_fichier(
-    session: Session, tmp_path
+    session: Session, tmp_path: Path
 ) -> None:
     """`deja_presents` est compté, pas déduit de `lus - inseres`.
 
@@ -123,7 +126,7 @@ def test_un_rechargement_ne_reecrit_pas_un_profil_existant(session: Session) -> 
     assert avant is not None
 
     session.execute(
-        ProfilORM.__table__.update()
+        update(TABLE_PROFIL)
         .where(ProfilORM.id == avant.id)
         .values(secteur="Croix-Rousse")
     )
@@ -147,7 +150,7 @@ def test_un_profil_sorti_du_vivier_n_est_ni_ressuscite_ni_reecrit(
     sortie = dt.datetime(2026, 8, 30, 12, 0, tzinfo=dt.UTC)
 
     session.execute(
-        ProfilORM.__table__.update()
+        update(TABLE_PROFIL)
         .where(ProfilORM.id == profil.id)
         .values(sortie_vivier_le=sortie)
     )
@@ -185,7 +188,7 @@ def test_l_ordre_par_identifiant_est_celui_de_la_base(session: Session) -> None:
     assert cles == [profil.cle_amorcage for profil in lire_donnees_amorcage()]
 
 
-def _fichier_a_ligne_invalide(tmp_path):
+def _fichier_a_ligne_invalide(tmp_path: Path) -> Path:
     """Deux lignes, la seconde portant un niveau que le domaine ne connaît pas."""
     fichier = tmp_path / "amorcage.csv"
     fichier.write_text(
@@ -197,7 +200,7 @@ def _fichier_a_ligne_invalide(tmp_path):
     return fichier
 
 
-def test_une_ligne_invalide_annule_la_transaction_au_demarrage(tmp_path) -> None:
+def test_une_ligne_invalide_annule_la_transaction_au_demarrage(tmp_path: Path) -> None:
     """« Ligne CSV invalide → échec bruyant, transaction annulée ».
 
     Le rollback éprouvé est celui de `preparer_le_vivier` — le chemin qu'emprunte le
@@ -225,7 +228,7 @@ def test_une_ligne_invalide_annule_la_transaction_au_demarrage(tmp_path) -> None
 
 
 def test_un_echec_en_cours_d_ecriture_annule_les_profils_deja_inseres(
-    tmp_path, monkeypatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """La transaction est annulée même quand des profils sont déjà écrits.
 
@@ -238,7 +241,10 @@ def test_un_echec_en_cours_d_ecriture_annule_les_profils_deja_inseres(
     inserer = DepotVivier.inserer_profil
     appels = {"n": 0}
 
-    def inserer_puis_echouer(self, **arguments):
+    # `**arguments` est `Any` : le double retransmet sans rien lire, et la
+    # signature de `inserer_profil` est entièrement par mot-clé et hétérogène —
+    # la retyper ici la dupliquerait, et c'est la duplication qui dériverait.
+    def inserer_puis_echouer(self: DepotVivier, **arguments: Any) -> Profil:
         appels["n"] += 1
         if appels["n"] > 2:
             raise RuntimeError("panne d'écriture simulée")
@@ -266,7 +272,7 @@ def test_un_echec_en_cours_d_ecriture_annule_les_profils_deja_inseres(
 
 
 def test_une_ligne_invalide_leve_avant_toute_ecriture(
-    moteur: Engine, tmp_path
+    moteur: Engine, tmp_path: Path
 ) -> None:
     """La lecture est complète avant la première insertion : rien n'est écrit."""
     fichier = _fichier_a_ligne_invalide(tmp_path)

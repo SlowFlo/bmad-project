@@ -9,6 +9,7 @@ from uuid import UUID
 import pytest
 from sqlalchemy import Engine, inspect, text
 from sqlalchemy.exc import IntegrityError, StatementError
+from sqlalchemy.orm import Session
 
 from exaequo.adaptateurs.secondaires.persistance.depots import DepotSports, DepotVivier
 from exaequo.adaptateurs.secondaires.persistance.modeles import JourDisponibleORM
@@ -106,7 +107,7 @@ def test_aucune_colonne_derivee_ni_de_calibration(moteur: Engine) -> None:
 
 
 def test_un_utilisateur_inscrit_se_distingue_d_un_profil_d_amorcage(
-    depot_vivier: DepotVivier, depot_sports: DepotSports, session
+    depot_vivier: DepotVivier, depot_sports: DepotSports, session: Session
 ) -> None:
     sport, _ = depot_sports.resoudre_a_l_ecriture("Tennis")
     inscrit = depot_vivier.inserer_profil(
@@ -133,7 +134,7 @@ def test_un_utilisateur_inscrit_se_distingue_d_un_profil_d_amorcage(
 
 
 def test_un_niveau_absent_reste_nul_en_base(
-    depot_vivier: DepotVivier, depot_sports: DepotSports, session
+    depot_vivier: DepotVivier, depot_sports: DepotSports, session: Session
 ) -> None:
     """Le *niveau inconnu* traverse la persistance : la colonne reste `NULL`."""
     sport, _ = depot_sports.resoudre_a_l_ecriture("Tennis")
@@ -150,11 +151,13 @@ def test_un_niveau_absent_reste_nul_en_base(
         text("SELECT count(*) FROM profil WHERE niveau IS NULL")
     ).scalar_one()
     assert nuls == 1
-    assert depot_vivier.par_identifiant(profil.id).niveau is None
+    relu = depot_vivier.par_identifiant(profil.id)
+    assert relu is not None
+    assert relu.niveau is None
 
 
 def test_les_jours_disponibles_ne_se_dupliquent_pas(
-    depot_vivier: DepotVivier, depot_sports: DepotSports, session
+    depot_vivier: DepotVivier, depot_sports: DepotSports, session: Session
 ) -> None:
     """Deux gardes, pas une : la déduplication du dépôt **et** celle du schéma."""
     sport, _ = depot_sports.resoudre_a_l_ecriture("Tennis")
@@ -181,7 +184,7 @@ def test_les_jours_disponibles_ne_se_dupliquent_pas(
 
 
 def test_un_horodatage_sans_fuseau_est_refuse(
-    depot_vivier: DepotVivier, depot_sports: DepotSports, session
+    depot_vivier: DepotVivier, depot_sports: DepotSports, session: Session
 ) -> None:
     """Les horodatages sont en UTC : une heure locale muette n'entre pas en base."""
     sport, _ = depot_sports.resoudre_a_l_ecriture("Tennis")
@@ -197,7 +200,7 @@ def test_un_horodatage_sans_fuseau_est_refuse(
 
 
 def test_un_numero_sans_provenance_est_refuse(
-    depot_vivier: DepotVivier, depot_sports: DepotSports, session
+    depot_vivier: DepotVivier, depot_sports: DepotSports, session: Session
 ) -> None:
     """AD-11 : chaque numéro porte sa provenance, enregistrée dans le modèle."""
     sport, _ = depot_sports.resoudre_a_l_ecriture("Tennis")
@@ -214,7 +217,7 @@ def test_un_numero_sans_provenance_est_refuse(
 
 
 def test_un_profil_d_amorcage_sans_cle_naturelle_est_refuse(
-    depot_vivier: DepotVivier, depot_sports: DepotSports, session
+    depot_vivier: DepotVivier, depot_sports: DepotSports, session: Session
 ) -> None:
     """AD-16 : l'idempotence porte sur une clé naturelle stable."""
     sport, _ = depot_sports.resoudre_a_l_ecriture("Tennis")
@@ -230,7 +233,7 @@ def test_un_profil_d_amorcage_sans_cle_naturelle_est_refuse(
 
 
 def test_deux_profils_ne_partagent_pas_une_cle_d_amorcage(
-    depot_vivier: DepotVivier, depot_sports: DepotSports, session
+    depot_vivier: DepotVivier, depot_sports: DepotSports, session: Session
 ) -> None:
     sport, _ = depot_sports.resoudre_a_l_ecriture("Tennis")
     depot_vivier.inserer_profil(
@@ -258,7 +261,7 @@ def test_deux_profils_ne_partagent_pas_une_cle_d_amorcage(
 
 
 def test_un_sport_jamais_fonde_est_refuse_par_la_base(
-    depot_vivier: DepotVivier, session
+    depot_vivier: DepotVivier, session: Session
 ) -> None:
     """Le `PRAGMA foreign_keys=ON` est observé : SQLite le laisse à OFF par défaut,
     et sans lui un profil pourrait pointer vers un sport qui n'existe pas."""
@@ -272,7 +275,7 @@ def test_un_sport_jamais_fonde_est_refuse_par_la_base(
         )
 
 
-def test_un_jour_disponible_orphelin_est_refuse_par_la_base(session) -> None:
+def test_un_jour_disponible_orphelin_est_refuse_par_la_base(session: Session) -> None:
     session.add(
         JourDisponibleORM(
             id=nouvel_identifiant(),
@@ -286,7 +289,7 @@ def test_un_jour_disponible_orphelin_est_refuse_par_la_base(session) -> None:
 
 
 def test_un_horodatage_decale_est_stocke_en_utc(
-    depot_vivier: DepotVivier, depot_sports: DepotSports, session
+    depot_vivier: DepotVivier, depot_sports: DepotSports, session: Session
 ) -> None:
     """Un instant donné en `+02:00` revient en UTC, sans avoir bougé.
 

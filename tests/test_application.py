@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 from sqlalchemy import text
 
@@ -14,7 +16,9 @@ from exaequo.adaptateurs.secondaires.persistance.depots import DepotSports, Depo
 from exaequo.application import creer_application, preparer_le_vivier
 
 
-def test_deux_demarrages_de_suite_laissent_quatre_vingt_six_profils(tmp_path) -> None:
+def test_deux_demarrages_de_suite_laissent_quatre_vingt_six_profils(
+    tmp_path: Path,
+) -> None:
     url = f"sqlite:///{tmp_path / 'vivier.db'}"
     decomptes = []
 
@@ -40,7 +44,7 @@ def test_deux_demarrages_de_suite_laissent_quatre_vingt_six_profils(tmp_path) ->
     assert decomptes[0] == decomptes[1]
 
 
-def test_une_base_privee_de_son_index_refuse_de_demarrer(tmp_path) -> None:
+def test_une_base_privee_de_son_index_refuse_de_demarrer(tmp_path: Path) -> None:
     """`create_all` n'atteint pas une table déjà là : la dérive doit être bruyante.
 
     Le cas réel est celui d'un `exaequo.db` né avant 2.1 : il porte déjà `profil`,
@@ -76,7 +80,7 @@ ROUTES_PAR_DEFAUT_DE_FASTAPI = {
 }
 
 
-def test_l_application_ne_pose_aucune_route(tmp_path) -> None:
+def test_l_application_ne_pose_aucune_route(tmp_path: Path) -> None:
     """E1 est la racine de composition ; l'adaptateur web arrive avec E3.
 
     Toutes les routes sont comparées, y compris hors schéma, WebSocket et montages :
@@ -88,7 +92,7 @@ def test_l_application_ne_pose_aucune_route(tmp_path) -> None:
     assert chemins == ROUTES_PAR_DEFAUT_DE_FASTAPI
 
 
-def test_le_test_de_route_verrait_une_route_ajoutee(tmp_path) -> None:
+def test_le_test_de_route_verrait_une_route_ajoutee(tmp_path: Path) -> None:
     """Garde-fou du test précédent : il doit échouer dès qu'une route apparaît."""
     application = creer_application(f"sqlite:///{tmp_path / 'vivier.db'}")
 
@@ -101,7 +105,7 @@ def test_le_test_de_route_verrait_une_route_ajoutee(tmp_path) -> None:
     assert "/temoin" in chemins
 
 
-def test_le_cycle_de_vie_amorce_le_vivier(tmp_path) -> None:
+def test_le_cycle_de_vie_amorce_le_vivier(tmp_path: Path) -> None:
     """Le `lifespan` crée le schéma puis déclenche l'amorçage.
 
     Il est joué directement plutôt que par un client de test : le socle n'a pas de

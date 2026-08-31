@@ -97,7 +97,10 @@ def _lire_jours(brut: str, numero_de_ligne: int) -> frozenset[JourSemaine]:
 
 
 def _lire_niveau(brut: str, numero_de_ligne: int) -> Niveau | None:
-    """Un niveau absent est le *niveau inconnu* : `None`, jamais une quatrième valeur."""
+    """Un niveau absent est le *niveau inconnu*.
+
+    `None`, jamais une quatrième valeur.
+    """
     libelle = brut.strip()
     if not libelle:
         return None

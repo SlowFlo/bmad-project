@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 
 from exaequo.amorcage.lecture import (
@@ -15,7 +17,7 @@ _EN_TETE = (
 )
 
 
-def _fichier(tmp_path, corps: str, fin_de_ligne: str = "\n"):
+def _fichier(tmp_path: Path, corps: str, fin_de_ligne: str = "\n") -> Path:
     chemin = tmp_path / "amorcage.csv"
     contenu = (_EN_TETE + corps).replace("\n", fin_de_ligne)
     chemin.write_bytes(contenu.encode("utf-8"))
@@ -57,7 +59,7 @@ def test_le_premier_profil_est_lu_tel_quel() -> None:
 
 
 @pytest.mark.parametrize("fin_de_ligne", ["\n", "\r\n"])
-def test_les_deux_fins_de_ligne_sont_lues(tmp_path, fin_de_ligne: str) -> None:
+def test_les_deux_fins_de_ligne_sont_lues(tmp_path: Path, fin_de_ligne: str) -> None:
     chemin = _fichier(
         tmp_path, "Emma,Leroy,+33639980002,Tennis,Mardi;Jeudi,Débutant\n", fin_de_ligne
     )
@@ -66,7 +68,7 @@ def test_les_deux_fins_de_ligne_sont_lues(tmp_path, fin_de_ligne: str) -> None:
     assert profils[0].niveau is Niveau.DEBUTANT
 
 
-def test_un_niveau_absent_est_le_niveau_inconnu(tmp_path) -> None:
+def test_un_niveau_absent_est_le_niveau_inconnu(tmp_path: Path) -> None:
     """Le niveau inconnu est une absence, pas une quatrième valeur d'énumération."""
     chemin = _fichier(tmp_path, "Emma,Leroy,+33639980002,Tennis,Mardi;Jeudi,\n")
     assert lire_donnees_amorcage(chemin)[0].niveau is None
@@ -84,13 +86,13 @@ def test_un_niveau_absent_est_le_niveau_inconnu(tmp_path) -> None:
         "Emma,Leroy,+33639980002,Tennis,Mardi\n",  # colonne manquante
     ],
 )
-def test_une_ligne_invalide_echoue_bruyamment(tmp_path, ligne: str) -> None:
+def test_une_ligne_invalide_echoue_bruyamment(tmp_path: Path, ligne: str) -> None:
     chemin = _fichier(tmp_path, ligne)
     with pytest.raises(ErreurDonneesAmorcage):
         lire_donnees_amorcage(chemin)
 
 
-def test_un_numero_en_double_echoue_bruyamment(tmp_path) -> None:
+def test_un_numero_en_double_echoue_bruyamment(tmp_path: Path) -> None:
     chemin = _fichier(
         tmp_path,
         "Emma,Leroy,+33639980002,Tennis,Mardi,Débutant\n"
@@ -100,13 +102,13 @@ def test_un_numero_en_double_echoue_bruyamment(tmp_path) -> None:
         lire_donnees_amorcage(chemin)
 
 
-def test_un_en_tete_inattendu_echoue_bruyamment(tmp_path) -> None:
+def test_un_en_tete_inattendu_echoue_bruyamment(tmp_path: Path) -> None:
     chemin = tmp_path / "amorcage.csv"
     chemin.write_text("Prenom,Nom\nEmma,Leroy\n", encoding="utf-8")
     with pytest.raises(ErreurDonneesAmorcage):
         lire_donnees_amorcage(chemin)
 
 
-def test_un_fichier_absent_echoue_bruyamment(tmp_path) -> None:
+def test_un_fichier_absent_echoue_bruyamment(tmp_path: Path) -> None:
     with pytest.raises(ErreurDonneesAmorcage):
         lire_donnees_amorcage(tmp_path / "absent.csv")

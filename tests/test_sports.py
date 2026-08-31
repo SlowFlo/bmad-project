@@ -5,6 +5,8 @@ Couvre les six premières lignes de la matrice d'E/S du lot.
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 
 from exaequo.amorcage.lecture import lire_donnees_amorcage
@@ -35,7 +37,9 @@ def test_les_accents_sont_retires_et_le_trait_d_union_conserve(
     assert cle_sport(libelle) == attendue
 
 
-def test_les_onze_libelles_du_fichier_donnent_onze_cles(chemin_donnees_amorcage) -> None:
+def test_les_onze_libelles_du_fichier_donnent_onze_cles(
+    chemin_donnees_amorcage: Path,
+) -> None:
     """Onze clés, pas douze : la normalisation ne pulvérise pas le vivier."""
     libelles = {profil.libelle_sport for profil in lire_donnees_amorcage()}
     assert len(libelles) == 11

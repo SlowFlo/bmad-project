@@ -59,13 +59,19 @@ class DepotSports:
         return self._session.scalar(select(func.count()).select_from(SportORM)) or 0
 
     def synonymes(self) -> dict[str, str]:
-        """Rend la table de synonymes sous la forme *clé de synonyme -> clé du sport*."""
-        lignes = self._session.execute(
-            select(SynonymeORM.cle, SportORM.cle).join(
-                SportORM, SportORM.id == SynonymeORM.sport_id
+        """Rend la table de synonymes : *clé de synonyme -> clé du sport*."""
+        # `.tuples()` ne change rien à l'exécution — SQLAlchemy rend le même
+        # objet — mais dit au vérificateur que les lignes sont des couples.
+        lignes = (
+            self._session.execute(
+                select(SynonymeORM.cle, SportORM.cle).join(
+                    SportORM, SportORM.id == SynonymeORM.sport_id
+                )
             )
-        ).all()
-        return {synonyme: sport for synonyme, sport in lignes}
+            .tuples()
+            .all()
+        )
+        return dict(lignes)
 
     def poser_synonyme(self, cle_du_synonyme: str, sport_id: UUID) -> Synonyme:
         """Inscrit une redirection d'écriture.
@@ -103,13 +109,17 @@ class DepotSports:
             self._session.add(ligne)
             self._session.flush()
         else:
-            ligne = self._session.scalar(
+            # La lecture peut rendre `None` ; la garde ci-dessous l'écarte, et
+            # `ligne` ne reçoit que ce qui a survécu. Le rétrécissement est ainsi
+            # écrit, pas seulement su.
+            trouve = self._session.scalar(
                 select(SportORM).where(SportORM.cle == resolution.cle)
             )
-            if ligne is None:  # pragma: no cover - garde d'intégrité
+            if trouve is None:  # pragma: no cover - garde d'intégrité
                 raise LookupError(
                     f"synonyme orphelin : aucun sport de clé {resolution.cle!r}"
                 )
+            ligne = trouve
 
         return _vers_sport(ligne), resolution
 
@@ -121,14 +131,22 @@ class DepotVivier:
         self._session = session
 
     def cles_amorcage_presentes(self) -> set[str]:
-        """Les clés naturelles déjà chargées. C'est sur elles que porte l'idempotence."""
-        return set(
-            self._session.scalars(
+        """Les clés naturelles déjà chargées.
+
+        C'est sur elles que porte l'idempotence.
+        """
+        # Le `is_not(None)` du `WHERE` garantit qu'aucune clé n'est nulle, mais
+        # SQLAlchemy ne sait pas l'exprimer dans le type de la colonne : la
+        # compréhension écarte `None` là où le vérificateur peut le voir.
+        return {
+            cle
+            for cle in self._session.scalars(
                 select(ProfilORM.cle_amorcage).where(
                     ProfilORM.cle_amorcage.is_not(None)
                 )
             ).all()
-        )
+            if cle is not None
+        }
 
     def compter(self) -> int:
         return self._session.scalar(select(func.count()).select_from(ProfilORM)) or 0
@@ -159,7 +177,9 @@ class DepotVivier:
         return [self._vers_profil(ligne) for ligne in lignes]
 
     def profils_du_sport(self, cle_sport: str) -> list[Profil]:
-        """Tous les profils d'une **clé de sport**, dans l'ordre du vivier (`PortVivier`).
+        """Tous les profils d'une **clé de sport**, dans l'ordre du vivier.
+
+        C'est la lecture que déclare le contrat `PortVivier`.
 
         Le dépôt **rétrécit, il ne filtre pas** : ni le niveau inconnu, ni la sortie du
         vivier, ni le demandeur n'écartent quoi que ce soit ici — ces exclusions sont

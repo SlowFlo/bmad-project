@@ -24,12 +24,13 @@ from sqlalchemy import (
     UniqueConstraint,
     Uuid,
 )
+from sqlalchemy.engine.interfaces import Dialect
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 from exaequo.domaine.vivier import JourSemaine, Niveau, Population, ProvenanceNumero
 
 
-class HorodatageUTC(TypeDecorator):
+class HorodatageUTC(TypeDecorator[dt.datetime]):
     """Horodatage conscient du fuseau, stocké en UTC.
 
     SQLite ne porte pas de fuseau : le décalage est appliqué à l'écriture et l'UTC
@@ -39,14 +40,21 @@ class HorodatageUTC(TypeDecorator):
     impl = DateTime
     cache_ok = True
 
-    def process_bind_param(self, value, dialect):
+    # `dialect` n'est pas utilisé, mais son nom est celui du crochet déclaré par
+    # `TypeDecorator` : le renommer casserait un appel par mot-clé.
+    def process_bind_param(
+        self, value: dt.datetime | None, dialect: Dialect  # noqa: ARG002
+    ) -> dt.datetime | None:
         if value is None:
             return None
         if value.tzinfo is None:
             raise ValueError("un horodatage doit porter son fuseau")
         return value.astimezone(dt.UTC).replace(tzinfo=None)
 
-    def process_result_value(self, value, dialect):
+    # Même raison qu'au-dessus : le nom du crochet appartient à SQLAlchemy.
+    def process_result_value(
+        self, value: dt.datetime | None, dialect: Dialect  # noqa: ARG002
+    ) -> dt.datetime | None:
         if value is None:
             return None
         return value.replace(tzinfo=dt.UTC)
@@ -138,7 +146,9 @@ class ProfilORM(Base):
     nom: Mapped[str | None] = mapped_column(String, nullable=True)
     population: Mapped[Population] = mapped_column(_enum(Population), nullable=False)
 
-    sport_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("sport.id"), nullable=False)
+    sport_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("sport.id"), nullable=False
+    )
     #: Le libellé tel que la personne l'a dit ; l'appariement passe par `sport_id`.
     libelle_sport: Mapped[str] = mapped_column(String, nullable=False)
     #: `NULL` est le *niveau inconnu* — une absence, pas une quatrième valeur.

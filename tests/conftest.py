@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 from collections.abc import Iterator
+from pathlib import Path
+from typing import cast
 
 import pytest
-from sqlalchemy import Engine
+from sqlalchemy import Engine, Table
 from sqlalchemy.orm import Session
 
 from exaequo.adaptateurs.secondaires.persistance.base import (
@@ -14,22 +16,28 @@ from exaequo.adaptateurs.secondaires.persistance.base import (
     creer_schema,
 )
 from exaequo.adaptateurs.secondaires.persistance.depots import DepotSports, DepotVivier
+from exaequo.adaptateurs.secondaires.persistance.modeles import ProfilORM
 from exaequo.amorcage.chargement import charger_donnees_amorcage
 from exaequo.amorcage.lecture import CHEMIN_DONNEES_AMORCAGE
-
 
 #: Le nombre de profils que porte le CSV d'amorçage. Les repères de mise au point ne
 #: valent que sur ce jeu-là : s'il change, ils doivent être relus, pas rattrapés.
 PROFILS_D_AMORCAGE = 86
 
+#: La table `profil`, pour les tests qui écrivent **derrière l'ORM** afin de
+#: prouver qu'un rechargement ne réécrit pas. `DeclarativeBase` déclare
+#: `__table__` comme un `FromClause` ; c'est un `Table`, et c'est ce que
+#: `update()` sait recevoir.
+TABLE_PROFIL = cast(Table, ProfilORM.__table__)
+
 
 @pytest.fixture
-def chemin_donnees_amorcage():
+def chemin_donnees_amorcage() -> Path:
     return CHEMIN_DONNEES_AMORCAGE
 
 
 @pytest.fixture
-def moteur(tmp_path) -> Iterator[Engine]:
+def moteur(tmp_path: Path) -> Iterator[Engine]:
     """Une base fichier neuve par test : la même forme qu'en exécution réelle."""
     moteur = creer_moteur(f"sqlite:///{tmp_path / 'vivier.db'}")
     creer_schema(moteur)

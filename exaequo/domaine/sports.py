@@ -57,7 +57,9 @@ def resoudre_libelle(
     cles_connues: Set[str],
     synonymes: Mapping[str, str],
 ) -> ResolutionSport:
-    """Résout un libellé **à l'écriture** : synonyme, puis sport existant, puis fondation.
+    """Résout un libellé **à l'écriture**.
+
+    Synonyme, puis sport existant, puis fondation.
 
     `synonymes` va d'une clé de synonyme vers la clé du sport qu'elle désigne. Elle
     n'est consultée qu'ici, c'est-à-dire à l'écriture : **la lecture ne la consulte

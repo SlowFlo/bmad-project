@@ -14,12 +14,15 @@ import ast
 import datetime as dt
 import inspect
 import textwrap
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence, Set
 from pathlib import Path
+from typing import Any, Protocol
 from uuid import UUID
 
 import pytest
-from sqlalchemy import Engine, event, text
+from conftest import TABLE_PROFIL
+from sqlalchemy import Connection, Engine, event, text, update
+from sqlalchemy.engine.interfaces import DBAPICursor, ExecutionContext
 from sqlalchemy.orm import Session
 
 from exaequo.adaptateurs.secondaires.persistance.depots import DepotSports, DepotVivier
@@ -32,6 +35,7 @@ from exaequo.domaine import recherche
 from exaequo.domaine.identifiants import nouvel_identifiant
 from exaequo.domaine.ports import PortVivier
 from exaequo.domaine.recherche import (
+    JourIndisponible,
     ResultatRecherche,
     chercher_candidats,
     chercher_candidats_exacts,
@@ -58,6 +62,37 @@ CONSULTATIONS_DE_SYNONYMES_INTERDITES = (
 #: vaudrait que pour `chercher_candidats_exacts` laisserait la porte ouverte sur
 #: le point d'entrée que le produit appelle réellement.
 POINTS_D_ENTREE_DE_LA_RECHERCHE = (chercher_candidats_exacts, chercher_candidats)
+
+
+class PointDEntreeDeRecherche(Protocol):
+    """La signature que les deux points d'entrée partagent, mot pour mot.
+
+    Les tests paramétrés ci-dessous en appellent un sans lui donner `niveau`, et
+    affirment que c'est une erreur. Typer le paramètre par un `Callable` permissif
+    — ou par `FunctionType`, dont le `__call__` accepte n'importe quoi — rendrait
+    cet appel acceptable au vérificateur : la garde qu'on éprouve à l'exécution
+    serait éteinte à l'écriture, là où elle devrait l'être en premier.
+    """
+
+    __name__: str
+
+    def __call__(
+        self,
+        vivier: PortVivier,
+        *,
+        libelle_sport: str,
+        jour: JourSemaine,
+        niveau: Niveau,
+        demandeur_id: UUID | None = None,
+        jours_indisponibles: Set[JourIndisponible] = frozenset(),
+    ) -> ResultatRecherche: ...
+
+
+#: Le protocole doit décrire la **vraie** signature, sinon il ne protège rien : ces
+#: deux affectations le prouvent statiquement, et `pytest.mark.parametrize` étant
+#: non typé, elles sont le seul endroit qui puisse le faire.
+_EXACT_EST_UN_POINT_D_ENTREE: PointDEntreeDeRecherche = chercher_candidats_exacts
+_PRODUIT_EST_UN_POINT_D_ENTREE: PointDEntreeDeRecherche = chercher_candidats
 
 
 class VivierEnMemoire:
@@ -121,7 +156,9 @@ def _prenoms(resultat: ResultatRecherche) -> list[str]:
     return [candidat.prenom for candidat in resultat.candidats]
 
 
-def _instructions_de(session: Session, appel) -> list[tuple[str, object]]:
+def _instructions_de(
+    session: Session, appel: Callable[[], object]
+) -> list[tuple[str, object]]:
     """Le SQL réellement envoyé au pilote pendant `appel`.
 
     On écoute le moteur plutôt que de recomposer la requête dans le test : c'est la
@@ -129,7 +166,16 @@ def _instructions_de(session: Session, appel) -> list[tuple[str, object]]:
     """
     instructions: list[tuple[str, object]] = []
 
-    def enregistrer(conn, cursor, statement, parameters, context, executemany):
+    def enregistrer(
+        conn: Connection,
+        cursor: DBAPICursor,
+        statement: str,
+        # `parameters` reste `Any` : SQLAlchemy le déclare
+        # `_DBAPIAnyExecuteParams`, un nom privé qu'il n'expose pas.
+        parameters: Any,
+        context: ExecutionContext | None,
+        executemany: bool,
+    ) -> None:
         instructions.append((statement, parameters))
 
     event.listen(Engine, "before_cursor_execute", enregistrer)
@@ -163,6 +209,7 @@ def _requete_des_profils_du_sport(
 def _plan_de(session: Session, sql: str, parametres: object) -> str:
     """Le `EXPLAIN QUERY PLAN` de SQLite, en une seule chaîne lisible."""
     brut = session.connection().connection.driver_connection
+    assert brut is not None
     lignes = brut.execute("EXPLAIN QUERY PLAN " + sql, parametres).fetchall()
     return " | ".join(ligne[3] for ligne in lignes)
 
@@ -329,7 +376,9 @@ def test_le_blocage_ne_deborde_pas_sur_un_autre_profil() -> None:
 @pytest.mark.parametrize(
     "point_d_entree", POINTS_D_ENTREE_DE_LA_RECHERCHE, ids=lambda f: f.__name__
 )
-def test_les_jours_indisponibles_sont_vides_par_defaut(point_d_entree) -> None:
+def test_les_jours_indisponibles_sont_vides_par_defaut(
+    point_d_entree: PointDEntreeDeRecherche,
+) -> None:
     """Le paramètre est inerte tant qu'E5 n'y branche pas la dérivation (AD-6).
 
     Le défaut est un `frozenset` et **non** un `set` : `set() == frozenset()` est
@@ -510,7 +559,10 @@ def test_le_refus_ne_convertit_rien_et_n_interroge_pas_le_vivier() -> None:
 
 
 def test_un_niveau_absent_est_refuse_comme_un_libelle() -> None:
-    """`None` n'est pas « tous les niveaux » : c'est une absence, et elle est refusée."""
+    """`None` n'est pas « tous les niveaux ».
+
+    C'est une absence, et elle est refusée.
+    """
     with pytest.raises(TypeError, match="niveau"):
         chercher_candidats_exacts(
             VivierEnMemoire({}),
@@ -609,7 +661,7 @@ def test_un_profil_sorti_du_vivier_disparait_de_la_recherche(
     assert emma is not None
 
     vivier_amorce.execute(
-        ProfilORM.__table__.update()
+        update(TABLE_PROFIL)
         .where(ProfilORM.id == emma.id)
         .values(sortie_vivier_le=dt.datetime(2026, 8, 30, 12, 0, tzinfo=dt.UTC))
     )
@@ -775,13 +827,13 @@ def test_l_elargissement_ne_relache_ni_le_sport_ni_le_niveau() -> None:
 #: d'une demande du mardi : c'est bien l'exclusion qui les écarte, pas le jour.
 EXCLUSIONS_DE_CAP_5_APRES_ELARGISSEMENT = (
     pytest.param(
-        lambda demandeur: _profil(
+        lambda _demandeur: _profil(
             prenom="Exclue", jours=(JourSemaine.JEUDI,), niveau=None
         ),
         id="niveau-inconnu",
     ),
     pytest.param(
-        lambda demandeur: _profil(
+        lambda _demandeur: _profil(
             prenom="Exclue",
             jours=(JourSemaine.JEUDI,),
             sortie_vivier_le=dt.datetime(2026, 8, 30, 12, 0, tzinfo=dt.UTC),
@@ -795,14 +847,16 @@ EXCLUSIONS_DE_CAP_5_APRES_ELARGISSEMENT = (
         id="demandeur-lui-meme",
     ),
     pytest.param(
-        lambda demandeur: _profil(prenom="Exclue", jours=()),
+        lambda _demandeur: _profil(prenom="Exclue", jours=()),
         id="aucun-jour-declare",
     ),
 )
 
 
 @pytest.mark.parametrize("fabriquer_exclue", EXCLUSIONS_DE_CAP_5_APRES_ELARGISSEMENT)
-def test_une_exclusion_de_cap_5_survit_a_l_elargissement(fabriquer_exclue) -> None:
+def test_une_exclusion_de_cap_5_survit_a_l_elargissement(
+    fabriquer_exclue: Callable[[UUID], Profil],
+) -> None:
     """Relâcher le jour ne relâche aucune des quatre autres exclusions.
 
     Le témoin « Retenue » est là pour que l'assertion prouve quelque chose : sans
@@ -827,8 +881,8 @@ def test_une_exclusion_de_cap_5_survit_a_l_elargissement(fabriquer_exclue) -> No
     assert resultat.jour_demande_indisponible is True
 
 
-def test_l_elargissement_n_ecarte_pas_un_autre_niveau_par_le_seul_niveau_demande() -> None:
-    """Le pendant du témoin : un profil du bon niveau, lui, passe bien l'élargissement."""
+def test_l_elargissement_garde_le_bon_niveau_et_ecarte_l_autre() -> None:
+    """Le pendant du témoin : un profil du bon niveau passe l'élargissement."""
     vivier = _vivier_de_tennis(
         _profil(prenom="Bon niveau", jours=(JourSemaine.JEUDI,)),
         _profil(
@@ -979,7 +1033,7 @@ def test_l_elargissement_n_appelle_le_port_qu_une_seule_fois() -> None:
     ],
 )
 def test_les_cinq_gardes_valent_aussi_pour_le_point_d_entree_produit(
-    parametre: str, arguments: dict
+    parametre: str, arguments: dict[str, object]
 ) -> None:
     """Jamais de vide muet : les gardes sont partagées, jamais recopiées.
 
@@ -1049,10 +1103,10 @@ def test_aucun_candidat_elargi_n_est_d_un_autre_niveau(vivier_amorce: Session) -
                     # confondent ici. Sous cette hypothèse seule, un candidat élargi
                     # ne peut pas avoir déclaré le jour demandé — sinon l'exact
                     # l'aurait rendu, et il n'y aurait pas eu d'élargissement.
-                    # Dès qu'un blocage entre en jeu, l'implication tombe :
-                    # `test_un_blocage_partiel_laisse_le_profil_rendu_par_l_elargissement`
-                    # en est le contre-exemple immédiat — drapeau vrai, et MARDI
-                    # toujours parmi les jours *déclarés* de la bloquée.
+                    # Dès qu'un blocage entre en jeu, l'implication tombe. Le
+                    # contre-exemple immédiat — drapeau vrai, et MARDI toujours
+                    # parmi les jours *déclarés* de la bloquée — est le test
+                    # test_un_blocage_partiel_laisse_le_profil_rendu_par_l_elargissement
                     for candidat in resultat.candidats:
                         assert jour not in candidat.jours_disponibles
 
@@ -1418,7 +1472,9 @@ PARAMETRES_ADMIS_DE_LA_RECHERCHE = frozenset(
 @pytest.mark.parametrize(
     "point_d_entree", POINTS_D_ENTREE_DE_LA_RECHERCHE, ids=lambda f: f.__name__
 )
-def test_la_recherche_ne_porte_que_les_parametres_admis(point_d_entree) -> None:
+def test_la_recherche_ne_porte_que_les_parametres_admis(
+    point_d_entree: PointDEntreeDeRecherche,
+) -> None:
     """L'interdit d'élargissement est vérifié par liste blanche, pas par liste noire.
 
     Une liste noire ne protège que contre les noms que son auteur a imaginés. Ici,
@@ -1437,7 +1493,7 @@ def test_la_recherche_ne_porte_que_les_parametres_admis(point_d_entree) -> None:
 
 
 def test_la_surface_publique_de_recherche_est_exactement_celle_attendue() -> None:
-    """Une classe `RechercheElargie` ajoutée au module échouerait ici, sans liste noire."""
+    """Sans liste noire : une classe `RechercheElargie` ajoutée échouerait ici."""
     noms = {nom for nom, _ in _surface_publique_de_recherche()}
     ajouts = noms - SURFACE_PUBLIQUE_ADMISE
 
@@ -1483,7 +1539,9 @@ def test_le_detecteur_de_fuite_reconnait_bien_une_porte_de_sortie() -> None:
 @pytest.mark.parametrize(
     "point_d_entree", POINTS_D_ENTREE_DE_LA_RECHERCHE, ids=lambda f: f.__name__
 )
-def test_le_niveau_est_obligatoire_et_ne_peut_pas_etre_absent(point_d_entree) -> None:
+def test_le_niveau_est_obligatoire_et_ne_peut_pas_etre_absent(
+    point_d_entree: PointDEntreeDeRecherche,
+) -> None:
     """`niveau: Niveau`, sans défaut et sans `None` : jamais « tous les niveaux ».
 
     Un défaut posé sur `chercher_candidats` seul — `niveau: Niveau = Niveau.DEBUTANT`
@@ -1497,6 +1555,8 @@ def test_le_niveau_est_obligatoire_et_ne_peut_pas_etre_absent(point_d_entree) ->
     assert niveau.kind is inspect.Parameter.KEYWORD_ONLY
 
     with pytest.raises(TypeError):
+        # L'ignore est **vivant** : omettre `niveau` est refusé à l'écriture par
+        # le protocole, et le test prouve qu'il l'est aussi à l'exécution.
         point_d_entree(  # type: ignore[call-arg]
             VivierEnMemoire({}),
             libelle_sport="Tennis",

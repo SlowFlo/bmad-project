@@ -12,8 +12,11 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
-from sqlalchemy import Engine, create_engine, event, inspect as inspecter
+from sqlalchemy import Engine, create_engine, event
+from sqlalchemy import inspect as inspecter
+from sqlalchemy.engine.interfaces import DBAPIConnection
 from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.pool import ConnectionPoolEntry
 
 __all__ = [
     "BASE_PAR_DEFAUT",
@@ -26,7 +29,10 @@ __all__ = [
 
 
 class SchemaObsolete(RuntimeError):
-    """Une base antérieure à une modification de schéma, que `create_all` n'atteint pas."""
+    """Une base antérieure à une modification de schéma.
+
+    `create_all` ne l'atteint pas : il ne touche jamais à une table déjà présente.
+    """
 
 
 BASE_PAR_DEFAUT = "sqlite:///exaequo.db"
@@ -43,7 +49,9 @@ def creer_moteur(url: str | None = None) -> Engine:
     moteur = create_engine(url or url_de_base())
 
     @event.listens_for(moteur, "connect")
-    def _activer_les_cles_etrangeres(connexion, _record):
+    def _activer_les_cles_etrangeres(
+        connexion: DBAPIConnection, _record: ConnectionPoolEntry
+    ) -> None:
         curseur = connexion.cursor()
         curseur.execute("PRAGMA foreign_keys=ON")
         curseur.close()

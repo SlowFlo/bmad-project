@@ -12,6 +12,8 @@ dependencies = [
 [dependency-groups]
 dev = [
     "pytest==8.4.2",
+    "ruff==0.14.5",
+    "mypy==1.18.2",
 ]
 
 [build-system]
@@ -23,3 +25,49 @@ packages = ["exaequo"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 88
+# `target-version` n'est pas déclaré : ruff le déduit de `requires-python`, qui
+# reste la seule source de la version de Python.
+# Le framework BMad installé, pas notre code : jamais analysé. `_bmad/` en est le
+# cœur ; `.claude/skills/` et `.agents/skills/` en sont deux copies conformes
+# posées par l'installateur. Seuls ces `skills/` sont exclus : ce que le projet
+# écrirait lui-même sous `.claude/` — un hook, par exemple — reste analysé.
+extend-exclude = ["_bmad", ".claude/skills", ".agents/skills"]
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "I", "N", "UP", "B", "C4", "SIM", "RUF", "ARG", "RET", "TID"]
+# `TID` n'interdit ici que les imports relatifs remontants. Il ne porte **pas**
+# AD-1 — « le domaine n'importe pas les adaptateurs » : `banned-api` est global,
+# et interdire `exaequo.adaptateurs` casserait les adaptateurs eux-mêmes.
+# L'invariant reste prouvé par `tests/test_domaine_sans_dependance.py`, qui lit
+# les modules du domaine à l'AST et résout aussi les imports relatifs.
+ignore = [
+    # N818 — le suffixe `Error` est une convention anglaise ; le dépôt nomme ses
+    # exceptions en français (`SchemaObsolete`), comme le reste du glossaire.
+    "N818",
+    # RUF001/RUF002/RUF003 — la typographie française (« », espaces insécables,
+    # apostrophes courbes) est délibérée dans le code, les docstrings et les
+    # commentaires : ce ne sont pas des caractères ambigus glissés par accident.
+    "RUF001",
+    "RUF002",
+    "RUF003",
+    # RUF022 — les `__all__` sont rangés en ordre **sémantique** (le concept avant
+    # ses satellites, voir `domaine/vivier.py`), pas en ordre alphabétique.
+    "RUF022",
+]
+
+[tool.ruff.lint.per-file-ignores]
+# ARG001 — une fixture pytest demandée pour son seul effet de bord (créer le
+# schéma, poser une variable d'environnement) n'est pas un paramètre mort.
+"tests/**" = ["ARG001"]
+
+[tool.mypy]
+strict = true
+files = ["exaequo", "tests"]
+python_version = "3.13"
+# Le choix de mypy tient à ce que les ignores portent leur **code d'erreur** :
+# `warn_unused_ignores` ne démasque un ignore devenu faux que s'il dit ce qu'il
+# masque. Un `# type: ignore` nu passerait sans cela.
+enable_error_code = ["ignore-without-code"]

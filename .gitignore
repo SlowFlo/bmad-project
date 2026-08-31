@@ -13,6 +13,8 @@ todomvc-3-items.png
 __pycache__/
 *.py[cod]
 .pytest_cache/
+.mypy_cache/
+.ruff_cache/
 
 # Base SQLite locale — un fichier à côté du dépôt, jamais en dépôt
 *.db

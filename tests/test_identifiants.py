@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterator
+from uuid import UUID
+
 import pytest
 
 from exaequo.domaine import identifiants
@@ -9,7 +12,7 @@ from exaequo.domaine.identifiants import nouvel_identifiant
 
 
 @pytest.fixture
-def etat_du_generateur_restaure():
+def etat_du_generateur_restaure() -> Iterator[None]:
     """Le générateur porte un état de processus : on le rend tel qu'on l'a trouvé.
 
     Sans cela, figer l'horloge dans le futur laisserait les identifiants tirés
@@ -24,7 +27,7 @@ def etat_du_generateur_restaure():
         identifiants._compteur = compteur
 
 
-def _horodatage_de(identifiant) -> int:
+def _horodatage_de(identifiant: UUID) -> int:
     return int.from_bytes(identifiant.bytes[0:6])
 
 
@@ -35,7 +38,10 @@ def test_la_version_et_la_variante_sont_celles_de_la_rfc_9562() -> None:
 
 
 def test_les_identifiants_sont_strictement_croissants() -> None:
-    """Y compris tirés dans la même milliseconde : c'est ce qui porte l'ordre du vivier."""
+    """Y compris tirés dans la même milliseconde.
+
+    C'est ce qui porte l'ordre du vivier.
+    """
     identifiants = [nouvel_identifiant() for _ in range(5_000)]
     assert identifiants == sorted(identifiants)
     assert len(set(identifiants)) == len(identifiants)
@@ -58,7 +64,7 @@ def test_l_horodatage_est_celui_du_moment() -> None:
 
 
 def test_le_compteur_epuise_emprunte_la_milliseconde_suivante(
-    monkeypatch, etat_du_generateur_restaure
+    monkeypatch: pytest.MonkeyPatch, etat_du_generateur_restaure: None
 ) -> None:
     """Horloge figée, plus de 4096 tirages : la branche d'emprunt est traversée.
 
@@ -83,7 +89,7 @@ def test_le_compteur_epuise_emprunte_la_milliseconde_suivante(
 
 
 def test_l_horloge_qui_recule_ne_casse_pas_l_ordre(
-    monkeypatch, etat_du_generateur_restaure
+    monkeypatch: pytest.MonkeyPatch, etat_du_generateur_restaure: None
 ) -> None:
     """Un ajustement d'horloge vers l'arrière ne doit pas rendre deux identifiants
     dans le désordre."""
