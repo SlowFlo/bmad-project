@@ -72,3 +72,14 @@ redoublés ici.*
 - source_spec: `documentation/implementation-artifacts/spec-2-1-chercher-des-candidats-du-niveau-exact.md`
   summary: `test_recherche.py` (967 lignes) mêle quatre préoccupations sans rapport.
   evidence: Règles du domaine contre faux port, repères sur les données d'amorçage, assertions SQLite (`PRAGMA index_list`, `PRAGMA index_info`, `EXPLAIN QUERY PLAN`) et gardes par AST/introspection. Les tests d'index et de plan sont des tests de persistance, pas de recherche ; le dépôt montre déjà la séparation avec `tests/test_domaine_sans_dependance.py`.
+
+## Deferred from: spec-2-2-elargir-sur-le-jour-et-sur-lui-seul (2026-08-31)
+
+- source_spec: `documentation/implementation-artifacts/spec-2-2-elargir-sur-le-jour-et-sur-lui-seul.md`
+  summary: Les candidats sont rendus avec leurs jours **déclarés**, non avec leurs jours effectivement disponibles : un jour immobilisé par `jours_indisponibles` resterait affiché par E3.
+  evidence: `_jours_effectivement_disponibles` retranche bien les jours immobilisés pour *décider* — l'exact exige que le jour demandé y soit, l'élargissement que l'ensemble soit non vide — mais le `Profil` rendu porte toujours son `jours_disponibles` d'origine, et rien ne projette la différence dans le résultat. Inatteignable aujourd'hui : `jours_indisponibles` est vide par défaut et E5 n'existe pas encore, donc aucun appelant réel ne passe de blocage. La projection appartient à 2.3, qui en a besoin de toute façon pour compter le délai d'attente vers l'avant depuis le jour demandé : compter sur un jour immobilisé donnerait un délai faux, pas seulement un affichage faux.
+
+- source_spec: `documentation/implementation-artifacts/spec-2-2-elargir-sur-le-jour-et-sur-lui-seul.md`
+  summary: Un résultat vide ne porte rien qui dise que l'élargissement a été tenté puis épuisé, alors que CAP-7 exige de le dire.
+  evidence: CAP-7 veut que la réponse « nomme le sport et le jour tentés, et dise ce qui a été élargi — tous les autres jours — avant de conclure qu'il n'y a personne à ce niveau ». Or `jour_demande_indisponible` qualifie des candidats et reste faux sur un vide, par conception assumée (voir les notes de conception de 2.2) : « Pilates, avancé » élargi puis épuisé, « squash » inconnu du vivier, et un exact vide sont trois résultats indiscernables. E3 devra soit recevoir cette information du domaine, soit la reconstruire — et la reconstruire, c'est inventer. À trancher au moment d'écrire CAP-7, pas ici : 2.2 n'a pas d'exigence qui la porte.
+

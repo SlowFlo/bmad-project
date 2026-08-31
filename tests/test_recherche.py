@@ -1,10 +1,11 @@
-"""La recherche exacte : égalité stricte de niveau, exclusions, clé de sport (CAP-5).
+"""La recherche : égalité stricte de niveau, exclusions, clé de sport, jour élargi.
 
 Les règles s'éprouvent contre un **faux port en mémoire** : c'est ce que gagne un port
 qui rétrécit sans filtrer — aucune base n'est nécessaire pour prouver qu'un niveau
 inconnu ou un profil sorti du vivier n'est jamais rendu. Les repères de mise au point
-— « Tennis, mardi, débutant » rend Emma Leroy — s'éprouvent, eux, contre le vivier
-d'amorçage réel, seul endroit où ces noms veulent dire quelque chose.
+— « Tennis, mardi, débutant » rend Emma Leroy, la même demande en intermédiaire rend
+Anna, Iris et Tessa après élargissement — s'éprouvent, eux, contre le vivier d'amorçage
+réel, seul endroit où ces noms veulent dire quelque chose.
 """
 
 from __future__ import annotations
@@ -30,7 +31,11 @@ from exaequo.adaptateurs.secondaires.persistance.modeles import (
 from exaequo.domaine import recherche
 from exaequo.domaine.identifiants import nouvel_identifiant
 from exaequo.domaine.ports import PortVivier
-from exaequo.domaine.recherche import ResultatRecherche, chercher_candidats_exacts
+from exaequo.domaine.recherche import (
+    ResultatRecherche,
+    chercher_candidats,
+    chercher_candidats_exacts,
+)
 from exaequo.domaine.sports import cle_sport, replier_texte
 from exaequo.domaine.vivier import JourSemaine, Niveau, Population, Profil
 
@@ -45,6 +50,14 @@ CONSULTATIONS_DE_SYNONYMES_INTERDITES = (
     "resoudre_libelle",
     "resoudre_a_l_ecriture",
 )
+
+#: Les deux points d'entrée publics de `recherche.py`. Tout ce qui porte sur la
+#: **forme** de la signature — le niveau obligatoire, le défaut inerte des jours
+#: indisponibles, la liste blanche des paramètres — les parcourt tous les deux :
+#: `chercher_candidats` (2.2) hérite des gardes de l'exact, et une garde qui ne
+#: vaudrait que pour `chercher_candidats_exacts` laisserait la porte ouverte sur
+#: le point d'entrée que le produit appelle réellement.
+POINTS_D_ENTREE_DE_LA_RECHERCHE = (chercher_candidats_exacts, chercher_candidats)
 
 
 class VivierEnMemoire:
@@ -313,14 +326,21 @@ def test_le_blocage_ne_deborde_pas_sur_un_autre_profil() -> None:
     assert _prenoms(resultat) == ["Margot"]
 
 
-def test_les_jours_indisponibles_sont_vides_par_defaut() -> None:
+@pytest.mark.parametrize(
+    "point_d_entree", POINTS_D_ENTREE_DE_LA_RECHERCHE, ids=lambda f: f.__name__
+)
+def test_les_jours_indisponibles_sont_vides_par_defaut(point_d_entree) -> None:
     """Le paramètre est inerte tant qu'E5 n'y branche pas la dérivation (AD-6).
 
     Le défaut est un `frozenset` et **non** un `set` : `set() == frozenset()` est
     vrai, si bien qu'une égalité seule laisserait passer le défaut mutable — partagé
     entre tous les appels, et qu'un appelant pourrait peupler pour tout le processus.
+
+    Éprouvé sur les **deux** points d'entrée : un défaut mutable posé sur le seul
+    `chercher_candidats` serait le plus dangereux des deux, puisque c'est lui que le
+    produit appelle.
     """
-    defaut = inspect.signature(chercher_candidats_exacts).parameters[
+    defaut = inspect.signature(point_d_entree).parameters[
         "jours_indisponibles"
     ].default
 
@@ -513,6 +533,9 @@ def test_tennis_mardi_debutant_rend_emma_leroy(vivier_amorce: Session) -> None:
     )
 
     assert [(c.prenom, c.nom) for c in resultat.candidats] == [("Emma", "Leroy")]
+    # L'exact n'élargit jamais, donc ne le signale jamais : Emma est bien disponible
+    # le mardi, et le drapeau de 2.2 dirait le contraire.
+    assert resultat.jour_demande_indisponible is False
 
 
 def test_la_meme_demande_en_intermediaire_ne_rend_rien(vivier_amorce: Session) -> None:
@@ -525,6 +548,11 @@ def test_la_meme_demande_en_intermediaire_ne_rend_rien(vivier_amorce: Session) -
     )
 
     assert resultat.candidats == ()
+    # Le drapeau de 2.2 reste faux là où il serait le plus tentant : c'est
+    # exactement la demande sur laquelle `chercher_candidats` rendra trois
+    # candidates en le levant. L'exact, lui, n'élargit pas — il n'a donc rien à
+    # signaler, et ne prétend pas que le jour était en cause.
+    assert resultat.jour_demande_indisponible is False
     # Anna, Iris et Tessa existent bien : elles ne jouent simplement pas le mardi.
     # Les rendre serait l'élargissement de 2.2, qui n'appartient pas à ce lot.
     autres_jours = {
@@ -619,6 +647,418 @@ def test_la_recherche_ne_consulte_jamais_la_table_de_synonymes(
     )
 
     assert resultat.candidats == ()
+
+
+# --- L'élargissement sur le jour, et sur lui seul -----------------------------------
+
+
+def test_l_elargissement_rend_anna_iris_et_tessa(vivier_amorce: Session) -> None:
+    """Le repère de 2.2, sur les données d'amorçage réelles.
+
+    « Tennis, mardi, intermédiaire » ne rend personne en exact — Anna, Iris et Tessa
+    jouent d'autres jours, exactement à ce niveau. Elles sont rendues dans **l'ordre
+    du vivier**, chacune avec ses jours déclarés, et le résultat porte que le jour
+    demandé n'était pas disponible.
+    """
+    depot = DepotVivier(vivier_amorce)
+
+    assert (
+        chercher_candidats_exacts(
+            depot,
+            libelle_sport="Tennis",
+            jour=JourSemaine.MARDI,
+            niveau=Niveau.INTERMEDIAIRE,
+        ).candidats
+        == ()
+    )
+
+    resultat = chercher_candidats(
+        depot,
+        libelle_sport="Tennis",
+        jour=JourSemaine.MARDI,
+        niveau=Niveau.INTERMEDIAIRE,
+    )
+
+    assert [(c.prenom, c.nom) for c in resultat.candidats] == [
+        ("Anna", "Perrot"),
+        ("Iris", "Payet"),
+        ("Tessa", "Armand"),
+    ]
+    assert [sorted(c.jours_disponibles) for c in resultat.candidats] == [
+        sorted({JourSemaine.MERCREDI, JourSemaine.SAMEDI}),
+        sorted({JourSemaine.LUNDI, JourSemaine.MERCREDI}),
+        sorted({JourSemaine.LUNDI, JourSemaine.SAMEDI}),
+    ]
+    assert resultat.jour_demande_indisponible is True
+    assert resultat.cle_sport == "tennis"
+    assert resultat.jour is JourSemaine.MARDI
+    assert resultat.niveau is Niveau.INTERMEDIAIRE
+
+
+def test_un_exact_non_vide_n_est_jamais_elargi(vivier_amorce: Session) -> None:
+    """« Tennis, mardi, débutant » rend Emma seule, et le drapeau reste faux.
+
+    Margot et Mélina sont débutantes au tennis, mais lundi et vendredi : les rendre
+    serait élargir un exact qui n'était pas vide.
+    """
+    resultat = chercher_candidats(
+        DepotVivier(vivier_amorce),
+        libelle_sport="Tennis",
+        jour=JourSemaine.MARDI,
+        niveau=Niveau.DEBUTANT,
+    )
+
+    assert [(c.prenom, c.nom) for c in resultat.candidats] == [("Emma", "Leroy")]
+    assert resultat.jour_demande_indisponible is False
+
+
+def test_un_seul_candidat_exact_suffit_a_interdire_l_elargissement() -> None:
+    """Le cas le plus tentant : l'élargissement aurait rendu bien davantage."""
+    vivier = _vivier_de_tennis(
+        _profil(prenom="Exacte", jours=(JourSemaine.MARDI,)),
+        _profil(prenom="Jeudi", jours=(JourSemaine.JEUDI,)),
+        _profil(prenom="Samedi", jours=(JourSemaine.SAMEDI,)),
+    )
+
+    resultat = chercher_candidats(
+        vivier,
+        libelle_sport="Tennis",
+        jour=JourSemaine.MARDI,
+        niveau=Niveau.DEBUTANT,
+    )
+
+    assert _prenoms(resultat) == ["Exacte"]
+    assert resultat.jour_demande_indisponible is False
+
+
+def test_l_elargissement_ne_relache_ni_le_sport_ni_le_niveau() -> None:
+    """Le jour est le **seul** axe : un autre sport ou un autre niveau reste dehors."""
+    vivier = VivierEnMemoire(
+        {
+            "tennis": (
+                _profil(
+                    prenom="Autre niveau",
+                    jours=(JourSemaine.JEUDI,),
+                    niveau=Niveau.AVANCE,
+                ),
+            ),
+            "padel": (
+                _profil(
+                    prenom="Autre sport",
+                    libelle_sport="Padel",
+                    jours=(JourSemaine.JEUDI,),
+                    niveau=Niveau.DEBUTANT,
+                ),
+            ),
+        }
+    )
+
+    resultat = chercher_candidats(
+        vivier,
+        libelle_sport="Tennis",
+        jour=JourSemaine.MARDI,
+        niveau=Niveau.DEBUTANT,
+    )
+
+    assert resultat.candidats == ()
+    assert resultat.jour_demande_indisponible is False
+    # Le port n'a été interrogé que sur la clé demandée : élargir ne va pas
+    # chercher un autre sport.
+    assert vivier.cles_demandees == ["tennis"]
+
+
+#: Les quatre exclusions de CAP-5 que le jour ne concerne pas, chacune fabriquée à
+#: part. Une seule assertion de liste les agrégerait : si « soi-même » cassait après
+#: élargissement — le cas que `_exiger_demandeur` documente précisément comme muet —
+#: l'échec ne dirait que « la liste diffère ». Séparées, il nomme l'exclusion.
+#: Toutes ces profils sont disponibles le **jeudi**, donc à portée de l'élargissement
+#: d'une demande du mardi : c'est bien l'exclusion qui les écarte, pas le jour.
+EXCLUSIONS_DE_CAP_5_APRES_ELARGISSEMENT = (
+    pytest.param(
+        lambda demandeur: _profil(
+            prenom="Exclue", jours=(JourSemaine.JEUDI,), niveau=None
+        ),
+        id="niveau-inconnu",
+    ),
+    pytest.param(
+        lambda demandeur: _profil(
+            prenom="Exclue",
+            jours=(JourSemaine.JEUDI,),
+            sortie_vivier_le=dt.datetime(2026, 8, 30, 12, 0, tzinfo=dt.UTC),
+        ),
+        id="sortie-du-vivier",
+    ),
+    pytest.param(
+        lambda demandeur: _profil(
+            prenom="Exclue", jours=(JourSemaine.JEUDI,), identifiant=demandeur
+        ),
+        id="demandeur-lui-meme",
+    ),
+    pytest.param(
+        lambda demandeur: _profil(prenom="Exclue", jours=()),
+        id="aucun-jour-declare",
+    ),
+)
+
+
+@pytest.mark.parametrize("fabriquer_exclue", EXCLUSIONS_DE_CAP_5_APRES_ELARGISSEMENT)
+def test_une_exclusion_de_cap_5_survit_a_l_elargissement(fabriquer_exclue) -> None:
+    """Relâcher le jour ne relâche aucune des quatre autres exclusions.
+
+    Le témoin « Retenue » est là pour que l'assertion prouve quelque chose : sans
+    lui, un élargissement cassé rendrait vide et le test passerait pour la mauvaise
+    raison.
+    """
+    demandeur = nouvel_identifiant()
+    temoin = _profil(prenom="Retenue", jours=(JourSemaine.JEUDI,))
+    vivier = _vivier_de_tennis(fabriquer_exclue(demandeur), temoin)
+
+    resultat = chercher_candidats(
+        vivier,
+        libelle_sport="Tennis",
+        jour=JourSemaine.MARDI,
+        niveau=Niveau.DEBUTANT,
+        demandeur_id=demandeur,
+    )
+
+    assert "Exclue" not in _prenoms(resultat)
+    # Le garde-fou du garde-fou : l'élargissement a bien eu lieu.
+    assert _prenoms(resultat) == ["Retenue"]
+    assert resultat.jour_demande_indisponible is True
+
+
+def test_l_elargissement_n_ecarte_pas_un_autre_niveau_par_le_seul_niveau_demande() -> None:
+    """Le pendant du témoin : un profil du bon niveau, lui, passe bien l'élargissement."""
+    vivier = _vivier_de_tennis(
+        _profil(prenom="Bon niveau", jours=(JourSemaine.JEUDI,)),
+        _profil(
+            prenom="Autre niveau", jours=(JourSemaine.JEUDI,), niveau=Niveau.AVANCE
+        ),
+    )
+
+    resultat = chercher_candidats(
+        vivier,
+        libelle_sport="Tennis",
+        jour=JourSemaine.MARDI,
+        niveau=Niveau.DEBUTANT,
+    )
+
+    assert _prenoms(resultat) == ["Bon niveau"]
+
+
+def test_un_blocage_partiel_laisse_le_profil_rendu_par_l_elargissement() -> None:
+    """Bloqué mardi, libre jeudi : c'est exactement ce que l'élargissement récupère."""
+    bloquee = _profil(
+        prenom="Bloquee mardi", jours=(JourSemaine.MARDI, JourSemaine.JEUDI)
+    )
+    vivier = _vivier_de_tennis(bloquee)
+
+    resultat = chercher_candidats(
+        vivier,
+        libelle_sport="Tennis",
+        jour=JourSemaine.MARDI,
+        niveau=Niveau.DEBUTANT,
+        jours_indisponibles=frozenset({(bloquee.id, JourSemaine.MARDI)}),
+    )
+
+    assert _prenoms(resultat) == ["Bloquee mardi"]
+    assert resultat.jour_demande_indisponible is True
+
+
+def test_un_blocage_total_n_est_jamais_rendu() -> None:
+    """Tous ses jours déclarés immobilisés : il n'a aucun jour à proposer (CAP-14)."""
+    immobilisee = _profil(
+        prenom="Immobilisee", jours=(JourSemaine.MARDI, JourSemaine.JEUDI)
+    )
+    vivier = _vivier_de_tennis(immobilisee)
+
+    resultat = chercher_candidats(
+        vivier,
+        libelle_sport="Tennis",
+        jour=JourSemaine.MARDI,
+        niveau=Niveau.DEBUTANT,
+        jours_indisponibles=frozenset(
+            {
+                (immobilisee.id, JourSemaine.MARDI),
+                (immobilisee.id, JourSemaine.JEUDI),
+            }
+        ),
+    )
+
+    assert resultat.candidats == ()
+    assert resultat.jour_demande_indisponible is False
+
+
+def test_un_vivier_vraiment_vide_ne_met_pas_le_jour_en_cause(
+    vivier_amorce: Session,
+) -> None:
+    """« Pilates, avancé » : personne, aucun jour. Le drapeau qualifie des candidats.
+
+    Vrai, il dirait « ceux-ci ne sont pas disponibles le jour demandé » — il n'y a
+    personne dont le dire.
+    """
+    resultat = chercher_candidats(
+        DepotVivier(vivier_amorce),
+        libelle_sport="Pilates",
+        jour=JourSemaine.MARDI,
+        niveau=Niveau.AVANCE,
+    )
+
+    assert resultat.candidats == ()
+    assert resultat.jour_demande_indisponible is False
+
+
+def test_un_sport_absent_rend_vide_sans_rien_ecrire_ni_lever(
+    vivier_amorce: Session,
+) -> None:
+    """« Squash » n'est pas un refus, même sur le point d'entrée qui élargit."""
+    depot_sports = DepotSports(vivier_amorce)
+    avant = depot_sports.compter()
+
+    resultat = chercher_candidats(
+        DepotVivier(vivier_amorce),
+        libelle_sport="squash",
+        jour=JourSemaine.MARDI,
+        niveau=Niveau.DEBUTANT,
+    )
+
+    assert resultat.candidats == ()
+    assert resultat.jour_demande_indisponible is False
+    assert depot_sports.compter() == avant == 11
+    assert depot_sports.par_cle("squash") is None
+
+
+def test_l_ordre_du_vivier_est_preserve_par_l_elargissement() -> None:
+    """Le second filtre ne retrie rien non plus : il ne fait, lui aussi, que retrancher.
+
+    2.1 avait pris soin de l'écrire pour l'exact ; l'élargissement passe par un autre
+    filtre et mérite le même test. 2.3 s'appuiera sur cet ordre — l'ordre du vivier,
+    identifiant croissant — pour départager les ex æquo du tri par délai d'attente,
+    qui est le cas le plus fréquent sur les données d'amorçage.
+    """
+    vivier = _vivier_de_tennis(
+        *(
+            _profil(prenom=prenom, jours=(JourSemaine.JEUDI,))
+            for prenom in ("Un", "Deux", "Trois", "Quatre")
+        )
+    )
+
+    resultat = chercher_candidats(
+        vivier,
+        libelle_sport="Tennis",
+        jour=JourSemaine.MARDI,
+        niveau=Niveau.DEBUTANT,
+    )
+
+    assert _prenoms(resultat) == ["Un", "Deux", "Trois", "Quatre"]
+    assert resultat.jour_demande_indisponible is True
+
+
+def test_l_elargissement_n_appelle_le_port_qu_une_seule_fois() -> None:
+    """Les profils chargés une fois se filtrent deux fois (AD-1, coût de 2.4)."""
+    vivier = _vivier_de_tennis(_profil(prenom="Jeudi", jours=(JourSemaine.JEUDI,)))
+
+    chercher_candidats(
+        vivier,
+        libelle_sport="Tennis",
+        jour=JourSemaine.MARDI,
+        niveau=Niveau.DEBUTANT,
+    )
+
+    assert vivier.cles_demandees == ["tennis"]
+
+
+@pytest.mark.parametrize(
+    ("parametre", "arguments"),
+    [
+        ("niveau", {"niveau": "debutant"}),
+        ("jour", {"jour": "mardi"}),
+        ("libelle_sport", {"libelle_sport": None}),
+        ("demandeur_id", {"demandeur_id": "pas-un-uuid"}),
+        ("jours_indisponibles", {"jours_indisponibles": frozenset({"mardi"})}),
+    ],
+)
+def test_les_cinq_gardes_valent_aussi_pour_le_point_d_entree_produit(
+    parametre: str, arguments: dict
+) -> None:
+    """Jamais de vide muet : les gardes sont partagées, jamais recopiées.
+
+    Un vide muet serait ici pire encore que sur l'exact : il ressemblerait à « aucun
+    candidat, même en élargissant », le résultat le plus décourageant du produit.
+    """
+    vivier = _vivier_de_tennis(_profil(prenom="Jeudi", jours=(JourSemaine.JEUDI,)))
+    appel = {
+        "libelle_sport": "Tennis",
+        "jour": JourSemaine.MARDI,
+        "niveau": Niveau.DEBUTANT,
+        **arguments,
+    }
+
+    with pytest.raises(TypeError, match=parametre):
+        chercher_candidats(vivier, **appel)  # type: ignore[arg-type]
+
+    # On refuse, on ne rattrape pas : le port n'est même pas appelé.
+    assert vivier.cles_demandees == []
+
+
+def test_aucun_candidat_elargi_n_est_d_un_autre_niveau(vivier_amorce: Session) -> None:
+    """Le test **négatif** de la règle de niveau de 2.2, sur toute la grille réelle.
+
+    Le risque propre à 2.2 est de relâcher une contrainte de trop. On parcourt donc
+    les sports, les jours et les niveaux du vivier d'amorçage, et on affirme une
+    **absence** : quel que soit le résultat — exact ou élargi — aucun candidat rendu
+    n'est d'un autre niveau que celui demandé, et l'élargissement n'est jamais
+    signalé sur un résultat vide.
+
+    Ce n'est **pas** la mesure de SM-3. Les chiffres contractuels de la grille — les
+    combinaisons sans candidat exact, la part que l'élargissement récupère, le plafond
+    atteignable au-delà duquel il faudrait soupçonner une fuite de niveau —
+    appartiennent à 2.4, qui les mesure et les assume. Les asserter ici les figerait
+    à deux endroits, dont l'un ne les explique pas.
+    """
+    depot = DepotVivier(vivier_amorce)
+    libelles = {
+        libelle
+        for (libelle,) in vivier_amorce.execute(
+            ProfilORM.__table__.select().with_only_columns(ProfilORM.libelle_sport)
+        )
+    }
+    assert len(libelles) == 11
+
+    elargissements = 0
+    for libelle in sorted(libelles):
+        for jour in JourSemaine:
+            for niveau in Niveau:
+                resultat = chercher_candidats(
+                    depot, libelle_sport=libelle, jour=jour, niveau=niveau
+                )
+                for candidat in resultat.candidats:
+                    assert candidat.niveau is niveau, (
+                        f"{libelle}/{jour}/{niveau} rend {candidat.prenom} "
+                        f"de niveau {candidat.niveau}"
+                    )
+                    assert candidat.sortie_vivier_le is None
+                    assert candidat.jours_disponibles
+                if not resultat.candidats:
+                    assert resultat.jour_demande_indisponible is False
+                if resultat.jour_demande_indisponible:
+                    elargissements += 1
+                    # Ce que cette assertion prouve, et ce qu'elle ne prouve pas :
+                    # la boucle ne passe **aucun** `jours_indisponibles`, si bien que
+                    # « jours déclarés » et « jours effectivement disponibles » se
+                    # confondent ici. Sous cette hypothèse seule, un candidat élargi
+                    # ne peut pas avoir déclaré le jour demandé — sinon l'exact
+                    # l'aurait rendu, et il n'y aurait pas eu d'élargissement.
+                    # Dès qu'un blocage entre en jeu, l'implication tombe :
+                    # `test_un_blocage_partiel_laisse_le_profil_rendu_par_l_elargissement`
+                    # en est le contre-exemple immédiat — drapeau vrai, et MARDI
+                    # toujours parmi les jours *déclarés* de la bloquée.
+                    for candidat in resultat.candidats:
+                        assert jour not in candidat.jours_disponibles
+
+    # Le garde-fou du garde-fou : la grille doit bien contenir des élargissements,
+    # sans quoi la boucle ne prouverait rien.
+    assert elargissements > 0
 
 
 # --- Le contrat du port, contre la base --------------------------------------------
@@ -955,7 +1395,14 @@ def test_aucune_signature_publique_n_ouvre_sur_un_autre_niveau() -> None:
 #: `niveau_max=`, `strict=False` ou `marge=` la traversent sans la déclencher. Cette
 #: liste-ci prend le problème par l'autre bout — **tout** ce qui n'y est pas inscrit
 #: fait échouer le test, y compris un paramètre inerte par défaut.
-SURFACE_PUBLIQUE_ADMISE = frozenset({"chercher_candidats_exacts", "ResultatRecherche"})
+#: `chercher_candidats` (2.2) y est inscrite **délibérément** : le point d'entrée
+#: produit élargit sur le jour, et sur lui seul. Son nom ne porte pas `elargi` — la
+#: liste noire ci-dessus le refuse justement pour interdire `elargir_le_niveau`, et on
+#: ne l'affaiblit pas pour se faire de la place : le geste est privé
+#: (`_elargir_sur_le_jour`).
+SURFACE_PUBLIQUE_ADMISE = frozenset(
+    {"chercher_candidats", "chercher_candidats_exacts", "ResultatRecherche"}
+)
 PARAMETRES_ADMIS_DE_LA_RECHERCHE = frozenset(
     {
         "vivier",
@@ -968,18 +1415,23 @@ PARAMETRES_ADMIS_DE_LA_RECHERCHE = frozenset(
 )
 
 
-def test_la_recherche_ne_porte_que_les_parametres_admis() -> None:
+@pytest.mark.parametrize(
+    "point_d_entree", POINTS_D_ENTREE_DE_LA_RECHERCHE, ids=lambda f: f.__name__
+)
+def test_la_recherche_ne_porte_que_les_parametres_admis(point_d_entree) -> None:
     """L'interdit d'élargissement est vérifié par liste blanche, pas par liste noire.
 
     Une liste noire ne protège que contre les noms que son auteur a imaginés. Ici,
-    ajouter `niveau_max`, `strict` ou `assouplir` à `chercher_candidats_exacts` fait
+    ajouter `niveau_max`, `strict` ou `assouplir` à l'un des deux points d'entrée fait
     échouer ce test tant que personne ne l'a délibérément inscrit — ce qui est
     exactement le geste qu'AC-3 veut rendre impossible par inadvertance.
     """
-    parametres = set(inspect.signature(chercher_candidats_exacts).parameters)
+    parametres = set(inspect.signature(point_d_entree).parameters)
     ajouts = parametres - PARAMETRES_ADMIS_DE_LA_RECHERCHE
 
-    assert not ajouts, f"paramètre non admis sur chercher_candidats_exacts : {sorted(ajouts)}"
+    assert not ajouts, (
+        f"paramètre non admis sur {point_d_entree.__name__} : {sorted(ajouts)}"
+    )
     # Le garde-fou du garde-fou : la liste blanche doit décrire la vraie signature.
     assert PARAMETRES_ADMIS_DE_LA_RECHERCHE - parametres == set()
 
@@ -991,6 +1443,29 @@ def test_la_surface_publique_de_recherche_est_exactement_celle_attendue() -> Non
 
     assert not ajouts, f"surface publique non admise : {sorted(ajouts)}"
     assert SURFACE_PUBLIQUE_ADMISE - noms == set()
+
+
+def test_l_export_public_de_recherche_est_exactement_celui_attendu() -> None:
+    """`__all__` échappe aux deux gardes de surface : il faut le fixer à part.
+
+    `_surface_publique_de_recherche` lit `vars(recherche)` et ne retient que ce dont
+    le `__module__` est celui de `recherche.py`. `JourIndisponible` est un **alias de
+    type** — `tuple[UUID, JourSemaine]` — dont le `__module__` vaut `builtins` : il
+    n'apparaît ni dans la liste noire, ni dans la liste blanche. Un futur
+    `NiveauxVoisins = tuple[Niveau, Niveau]`, exporté et documenté, les traverserait
+    donc toutes les deux sans un test rouge. Celui-ci ferme la porte par le nom
+    exporté, qui est ce qu'un appelant importe réellement.
+    """
+    assert recherche.__all__ == [
+        "JourIndisponible",
+        "ResultatRecherche",
+        "chercher_candidats",
+        "chercher_candidats_exacts",
+    ]
+    # Un nom exporté qui ne résout pas est un `ImportError` chez l'appelant, pas ici.
+    for nom in recherche.__all__:
+        assert hasattr(recherche, nom), nom
+        assert not any(fuite in nom.casefold() for fuite in FUITES_DE_NIVEAU), nom
 
 
 def test_le_detecteur_de_fuite_reconnait_bien_une_porte_de_sortie() -> None:
@@ -1005,17 +1480,39 @@ def test_le_detecteur_de_fuite_reconnait_bien_une_porte_de_sortie() -> None:
         assert any(fuite in porte for fuite in FUITES_DE_NIVEAU), porte
 
 
-def test_le_niveau_est_obligatoire_et_ne_peut_pas_etre_absent() -> None:
-    """`niveau: Niveau`, sans défaut et sans `None` : jamais « tous les niveaux »."""
-    niveau = inspect.signature(chercher_candidats_exacts).parameters["niveau"]
+@pytest.mark.parametrize(
+    "point_d_entree", POINTS_D_ENTREE_DE_LA_RECHERCHE, ids=lambda f: f.__name__
+)
+def test_le_niveau_est_obligatoire_et_ne_peut_pas_etre_absent(point_d_entree) -> None:
+    """`niveau: Niveau`, sans défaut et sans `None` : jamais « tous les niveaux ».
+
+    Un défaut posé sur `chercher_candidats` seul — `niveau: Niveau = Niveau.DEBUTANT`
+    — rendrait le niveau facultatif sur le point d'entrée que le produit appelle, et
+    l'omettre ne lèverait plus rien : c'est l'égalité stricte devenue silencieuse.
+    """
+    niveau = inspect.signature(point_d_entree).parameters["niveau"]
 
     assert niveau.default is inspect.Parameter.empty
     assert niveau.annotation == "Niveau"
     assert niveau.kind is inspect.Parameter.KEYWORD_ONLY
 
     with pytest.raises(TypeError):
-        chercher_candidats_exacts(  # type: ignore[call-arg]
+        point_d_entree(  # type: ignore[call-arg]
             VivierEnMemoire({}),
             libelle_sport="Tennis",
             jour=JourSemaine.MARDI,
         )
+
+
+def test_les_deux_points_d_entree_ont_exactement_la_meme_signature() -> None:
+    """La docstring de `chercher_candidats` promet « signature identique » à l'exact.
+
+    Rien ne l'éprouvait. Or c'est cette identité qui fait porter à l'élargissement
+    **toutes** les gardes de 2.1 : le jour dérive d'un paramètre ajouté, d'un défaut
+    posé ou d'une annotation relâchée sur un seul des deux, et la liste blanche des
+    paramètres ne verrait qu'une signature sur deux. Une égalité de `Signature`
+    compare les noms, l'ordre, les genres, les défauts et les annotations.
+    """
+    assert inspect.signature(chercher_candidats) == inspect.signature(
+        chercher_candidats_exacts
+    )

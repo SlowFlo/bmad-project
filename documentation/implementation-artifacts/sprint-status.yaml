@@ -29,7 +29,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 # - Retrospective appends its action items to action_items; the status view surfaces open ones
 generated: 08-31-2026 11:00
-last_updated: 08-31-2026 17:45
+last_updated: 08-31-2026 18:30
 project: Ex Aequo
 project_key: NOKEY
 tracking_system: file-system
@@ -41,7 +41,7 @@ development_status:
 
   epic-2: in-progress
   2-1-chercher-des-candidats-du-niveau-exact: done
-  2-2-élargir-sur-le-jour-et-sur-lui-seul: backlog
+  2-2-élargir-sur-le-jour-et-sur-lui-seul: review
   2-3-ordonner-et-plafonner-les-candidats: backlog
   2-4-mesurer-sm-3-sur-les-231-combinaisons: backlog
   2-5-aucun-élargissement-de-niveau-à-aucune-étape: backlog
