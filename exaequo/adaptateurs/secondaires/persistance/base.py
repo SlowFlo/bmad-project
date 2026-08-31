@@ -2,7 +2,9 @@
 
 Enveloppe locale à un seul environnement : la base est un fichier à côté du dépôt et
 le schéma est créé au démarrage. **Pas d'outil de migration** — Alembic serait de
-l'appareillage sans usage.
+l'appareillage sans usage. En contrepartie, `creer_schema` vérifie que la base en
+place porte bien le schéma déclaré, et refuse de démarrer sinon : sans migration, la
+seule chose qu'on ne peut pas se permettre est de dériver en silence.
 """
 
 from __future__ import annotations
@@ -10,16 +12,22 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
-from sqlalchemy import Engine, create_engine, event
+from sqlalchemy import Engine, create_engine, event, inspect as inspecter
 from sqlalchemy.orm import Session, sessionmaker
 
 __all__ = [
     "BASE_PAR_DEFAUT",
+    "SchemaObsolete",
     "url_de_base",
     "creer_moteur",
     "creer_fabrique_de_sessions",
     "creer_schema",
 ]
+
+
+class SchemaObsolete(RuntimeError):
+    """Une base antérieure à une modification de schéma, que `create_all` n'atteint pas."""
+
 
 BASE_PAR_DEFAUT = "sqlite:///exaequo.db"
 
@@ -48,9 +56,41 @@ def creer_fabrique_de_sessions(moteur: Engine) -> sessionmaker[Session]:
 
 
 def creer_schema(moteur: Engine) -> None:
-    """Crée les tables absentes. Rejouable sans effet."""
+    """Crée les tables absentes, puis exige que le schéma en place soit celui déclaré.
+
+    Rejouable sans effet — mais **pas** rattrapant : `create_all` ne touche jamais à
+    une table qui existe déjà, index compris. Une base née avant l'ajout d'un index ne
+    le recevra donc jamais, et rien ne le dit : la recherche continue de rendre les
+    bons profils, simplement en balayant la table. Faute d'outil de migration (voir
+    `deferred-work.md`), la garde ci-dessous transforme cette dérive muette en échec
+    bruyant au démarrage — c'est le seul endroit que traversent tous les points
+    d'entrée.
+    """
     from exaequo.adaptateurs.secondaires.persistance.modeles import Base
 
     if moteur.url.database and moteur.url.get_backend_name() == "sqlite":
         Path(moteur.url.database).parent.mkdir(parents=True, exist_ok=True)
     Base.metadata.create_all(moteur)
+    _exiger_les_index_declares(moteur)
+
+
+def _exiger_les_index_declares(moteur: Engine) -> None:
+    """Refuse une base à laquelle il manque un index déclaré dans les modèles."""
+    from exaequo.adaptateurs.secondaires.persistance.modeles import Base
+
+    inspecteur = inspecter(moteur)
+    manquants = sorted(
+        f"{table.name}.{index.name}"
+        for table in Base.metadata.tables.values()
+        for index in table.indexes
+        if index.name
+        not in {pose["name"] for pose in inspecteur.get_indexes(table.name)}
+    )
+    if manquants:
+        raise SchemaObsolete(
+            "Base antérieure à une modification de schéma : index manquants — "
+            f"{', '.join(manquants)}. `create_all` ne modifie pas une table déjà "
+            "présente. Supprimer le fichier de base (ou pointer `EXAEQUO_BASE` "
+            "ailleurs) pour le faire recréer ; les données d'amorçage se rechargent "
+            "seules."
+        )

@@ -120,9 +120,11 @@ class ProfilORM(Base):
             "OR (cle_amorcage IS NOT NULL)",
             name="ck_profil_amorcage_porte_sa_cle",
         ),
-        #: « Chercher les profils d'un sport » est l'accès central de la recherche
-        #: (DW-1) : SQLite n'indexe pas les clés étrangères, et sans cet index il
-        #: balaie `profil` à chaque recherche.
+        #: « Chercher les profils d'un sport » est l'accès central de la recherche :
+        #: SQLite n'indexe pas les clés étrangères, et sans cet index il balaie
+        #: `profil` à chaque recherche. Report d'E1 « aucun index sur
+        #: `profil.sport_id` », clos dans `deferred-work.md` — les entrées de ce
+        #: fichier n'ayant pas d'identifiant, on la désigne par son intitulé.
         #:
         #: **Composite, et dans cet ordre** : `sport_id` sert la jointure, `id` sert
         #: le `ORDER BY profil.id` qui la suit — l'*ordre du vivier*, dont 2.3 a

@@ -18,6 +18,11 @@ from exaequo.amorcage.chargement import charger_donnees_amorcage
 from exaequo.amorcage.lecture import CHEMIN_DONNEES_AMORCAGE
 
 
+#: Le nombre de profils que porte le CSV d'amorçage. Les repères de mise au point ne
+#: valent que sur ce jeu-là : s'il change, ils doivent être relus, pas rattrapés.
+PROFILS_D_AMORCAGE = 86
+
+
 @pytest.fixture
 def chemin_donnees_amorcage():
     return CHEMIN_DONNEES_AMORCAGE
@@ -59,6 +64,11 @@ def vivier_amorce(session: Session) -> Session:
     valent que sur ces données-là : la fixture les charge par le chemin réel du
     produit, jamais par un jeu d'essai réécrit à côté.
     """
-    charger_donnees_amorcage(session)
+    resultat = charger_donnees_amorcage(session)
+    assert resultat.inseres == PROFILS_D_AMORCAGE, (
+        f"le vivier d'amorçage a inséré {resultat.inseres} profils au lieu de "
+        f"{PROFILS_D_AMORCAGE} : les repères qui en dépendent — « Tennis, mardi, "
+        f"débutant » rend Emma Leroy — ne veulent alors plus rien dire."
+    )
     session.commit()
     return session

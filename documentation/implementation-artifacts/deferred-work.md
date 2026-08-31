@@ -38,3 +38,37 @@
 - source_spec: `documentation/implementation-artifacts/spec-2-1-chercher-des-candidats-du-niveau-exact.md`
   summary: Les entrées de ce fichier ne portent aucun identifiant, alors que `modeles.py` et `tests/test_recherche.py` citent « DW-1 » en dur.
   evidence: Seul le rang identifie une entrée. Insérer une entrée en tête renumérote silencieusement toutes les références écrites dans le code. Rien ne distingue non plus visuellement une entrée close d'une entrée ouverte. Correctif minimal : un champ `id:` par entrée, posé une fois pour toutes.
+
+## Deferred from: code review of spec-2-1-chercher-des-candidats-du-niveau-exact (2026-08-31)
+
+*Trois constats de cette revue — le N+1 de `_vers_profil`, l'absence d'`id:` sur les entrées de ce
+fichier, et l'absence d'intégration continue — sont déjà enregistrés ci-dessus et ne sont pas
+redoublés ici.*
+
+- source_spec: `documentation/implementation-artifacts/spec-2-1-chercher-des-candidats-du-niveau-exact.md`
+  summary: `assert isinstance(depot, PortVivier)` ne prouve que la présence des méthodes, jamais leur signature.
+  evidence: Un `Protocol` `@runtime_checkable` ne vérifie ni le nom des paramètres, ni l'arité, ni le type de retour. Un `DepotVivier.profils_du_sport` qui se mettrait à filtrer, ou qui perdrait `cle_sport`, passerait encore. Le correctif — une affectation statique `_: PortVivier = DepotVivier(session)` — ne vaut que s'il existe un vérificateur de types, ce qui rattache cette entrée à celle de l'outillage.
+
+- source_spec: `documentation/implementation-artifacts/spec-2-1-chercher-des-candidats-du-niveau-exact.md`
+  summary: Aucun vérificateur de types ni linter, alors que le dépôt porte des `# type: ignore` qui ne sont vérifiés par rien.
+  evidence: `pyproject.toml` ne déclare que `pytest==8.4.2` en dépendance de développement et n'a que `[tool.pytest.ini_options]`. Le défaut que la spec consigne elle-même — `niveau="debutant"` rendant un vide muet — est précisément la classe de bug qu'un vérificateur de types attrape ; la garde `_exiger_membre` le compense à l'exécution pour ce cas seul. Distinct de l'entrée « aucune intégration continue » : celle-ci porte sur l'outil, celle-là sur son déclenchement.
+
+- source_spec: `documentation/implementation-artifacts/spec-2-1-chercher-des-candidats-du-niveau-exact.md`
+  summary: `profils_du_sport` accepte un libellé d'affichage non normalisé et rend une liste vide indiscernable d'un sport absent.
+  evidence: Le contrat de `PortVivier` exige la clé normalisée, et `chercher_candidats_exacts` la produit toujours par `cle_sport`. Mais rien dans le dépôt ne refuse `profils_du_sport("Tennis")`, qui rend simplement vide. Aucun appelant fautif n'existe aujourd'hui — la recherche est le seul consommateur. Une garde `replier_texte(cle) == cle` fermerait la porte avant qu'un adaptateur primaire d'E3 ne l'ouvre.
+
+- source_spec: `documentation/implementation-artifacts/spec-2-1-chercher-des-candidats-du-niveau-exact.md`
+  summary: Trois exclusions de CAP-5 ne sont éprouvées que contre le faux port, jamais contre le vivier réel.
+  evidence: `test_le_port_rend_un_niveau_inconnu_que_le_domaine_ecarte` existe précisément parce que prouver une exclusion contre le seul faux port la prouve « là où c'est le plus facile ». Les lignes « Soi-même », « Jour indisponible » et « Sans jour déclaré » de la matrice n'ont pas reçu le même traitement.
+
+- source_spec: `documentation/implementation-artifacts/spec-2-1-chercher-des-candidats-du-niveau-exact.md`
+  summary: `sprint-status.yaml` : clés d'histoires tronquées et diversement accentuées, `action_items` documenté mais absent, dates en MM-DD-YYYY non étiquetées.
+  evidence: `2-1-chercher-…` est en ASCII quand `2-2-élargir-…` garde ses accents ; `6-4-…-explique-d-où-il-s`, `7-2-…-jouabilité-applicabl` et `9-2-…-d-un-profi` sont coupées vers 60 caractères. Aucune clé ne se relie mécaniquement à un nom de fichier de spec. L'en-tête définit des statuts d'`action_items` et une clé `action_items:` qui n'existe pas dans le fichier. Fichier produit par `sprint-planning`, pas par ce lot : à traiter chez son générateur.
+
+- source_spec: `documentation/implementation-artifacts/spec-2-1-chercher-des-candidats-du-niveau-exact.md`
+  summary: `epic-2-context.md` se dit compilé depuis les artefacts de planification sans citer un seul chemin source, et ses nombres contractuels n'ont aucune provenance.
+  evidence: L'en-tête dit « Régénérez avec compile-epic-context si les documents de planification changent » sans nommer ni `epics.md`, ni le PRD, ni la SPEC : rien ne permet de savoir si le fichier est périmé. « 127 combinaisons sans candidat exact », « au moins 85 % sans dépasser 89 % », « de 6,1 % à 3,0 % » sont affirmés à plat, alors que 2.4 est précisément l'histoire qui les mesurera — sans dire contre quelle révision du jeu de données ni ce qu'il advient d'un désaccord.
+
+- source_spec: `documentation/implementation-artifacts/spec-2-1-chercher-des-candidats-du-niveau-exact.md`
+  summary: `test_recherche.py` (967 lignes) mêle quatre préoccupations sans rapport.
+  evidence: Règles du domaine contre faux port, repères sur les données d'amorçage, assertions SQLite (`PRAGMA index_list`, `PRAGMA index_info`, `EXPLAIN QUERY PLAN`) et gardes par AST/introspection. Les tests d'index et de plan sont des tests de persistance, pas de recherche ; le dépôt montre déjà la séparation avec `tests/test_domaine_sans_dependance.py`.

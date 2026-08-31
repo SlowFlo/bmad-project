@@ -5,7 +5,9 @@ d'un adaptateur, et l'adaptateur vient s'y conformer. Un port **rétrécit**, il
 filtre pas : les règles — le niveau, la sortie du vivier, le demandeur, les jours
 indisponibles — appartiennent au domaine, ce qui les rend éprouvables sans base.
 
-`typing` seul : aucune autre dépendance, à aucune profondeur.
+Bibliothèque standard seule : `typing` à l'exécution, pour le protocole lui-même, et
+`collections.abc` sous `TYPE_CHECKING`, pour la seule annotation de retour. Aucune
+dépendance tierce, à aucune profondeur.
 """
 
 from __future__ import annotations

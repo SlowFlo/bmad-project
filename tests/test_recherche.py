@@ -31,6 +31,7 @@ from exaequo.domaine import recherche
 from exaequo.domaine.identifiants import nouvel_identifiant
 from exaequo.domaine.ports import PortVivier
 from exaequo.domaine.recherche import ResultatRecherche, chercher_candidats_exacts
+from exaequo.domaine.sports import cle_sport, replier_texte
 from exaequo.domaine.vivier import JourSemaine, Niveau, Population, Profil
 
 RACINE_DU_PROJET = Path(__file__).resolve().parents[1]
@@ -804,7 +805,10 @@ def test_le_depot_rend_vide_sur_une_cle_inconnue(vivier_amorce: Session) -> None
 def test_l_index_sur_la_cle_de_sport_existe_apres_creation_du_schema(
     moteur: Engine,
 ) -> None:
-    """DW-1 : sans lui, SQLite balaie `profil` à chaque recherche — et 2.4 en fait 231."""
+    """Sans lui, SQLite balaie `profil` à chaque recherche — et 2.4 en fait 231.
+
+    Report d'E1 « aucun index sur `profil.sport_id` », clos par cette histoire.
+    """
     with moteur.connect() as connexion:
         index = {
             ligne[1] for ligne in connexion.execute(text("PRAGMA index_list(profil)"))
@@ -854,6 +858,13 @@ def _sources_du_chemin_de_recherche() -> dict[str, str]:
         ),
         "DepotVivier._vers_profil": inspect.getsource(DepotVivier._vers_profil),
         "DepotVivier._jours_de": inspect.getsource(DepotVivier._jours_de),
+        # `sports.py` est sur le chemin — `chercher_candidats_exacts` y appelle
+        # `cle_sport` — et c'est le module qui **définit** `resoudre_libelle` : le
+        # lieu le plus probable d'une reconsultation de la table de synonymes. On
+        # n'ajoute que les deux fonctions de lecture, pas le fichier entier, qui
+        # contiendrait `resoudre_libelle` par définition et non par appel.
+        "sports.cle_sport": inspect.getsource(cle_sport),
+        "sports.replier_texte": inspect.getsource(replier_texte),
     }
 
 
@@ -937,6 +948,49 @@ def test_aucune_signature_publique_n_ouvre_sur_un_autre_niveau() -> None:
             assert not any(
                 fuite in parametre.name.casefold() for fuite in FUITES_DE_NIVEAU
             ), f"{nom}({parametre.name})"
+
+
+#: La surface publique admise de `recherche.py`, et les paramètres admis de la
+#: recherche. La liste noire ci-dessus n'attrape que le vocabulaire auquel on a pensé :
+#: `niveau_max=`, `strict=False` ou `marge=` la traversent sans la déclencher. Cette
+#: liste-ci prend le problème par l'autre bout — **tout** ce qui n'y est pas inscrit
+#: fait échouer le test, y compris un paramètre inerte par défaut.
+SURFACE_PUBLIQUE_ADMISE = frozenset({"chercher_candidats_exacts", "ResultatRecherche"})
+PARAMETRES_ADMIS_DE_LA_RECHERCHE = frozenset(
+    {
+        "vivier",
+        "libelle_sport",
+        "jour",
+        "niveau",
+        "demandeur_id",
+        "jours_indisponibles",
+    }
+)
+
+
+def test_la_recherche_ne_porte_que_les_parametres_admis() -> None:
+    """L'interdit d'élargissement est vérifié par liste blanche, pas par liste noire.
+
+    Une liste noire ne protège que contre les noms que son auteur a imaginés. Ici,
+    ajouter `niveau_max`, `strict` ou `assouplir` à `chercher_candidats_exacts` fait
+    échouer ce test tant que personne ne l'a délibérément inscrit — ce qui est
+    exactement le geste qu'AC-3 veut rendre impossible par inadvertance.
+    """
+    parametres = set(inspect.signature(chercher_candidats_exacts).parameters)
+    ajouts = parametres - PARAMETRES_ADMIS_DE_LA_RECHERCHE
+
+    assert not ajouts, f"paramètre non admis sur chercher_candidats_exacts : {sorted(ajouts)}"
+    # Le garde-fou du garde-fou : la liste blanche doit décrire la vraie signature.
+    assert PARAMETRES_ADMIS_DE_LA_RECHERCHE - parametres == set()
+
+
+def test_la_surface_publique_de_recherche_est_exactement_celle_attendue() -> None:
+    """Une classe `RechercheElargie` ajoutée au module échouerait ici, sans liste noire."""
+    noms = {nom for nom, _ in _surface_publique_de_recherche()}
+    ajouts = noms - SURFACE_PUBLIQUE_ADMISE
+
+    assert not ajouts, f"surface publique non admise : {sorted(ajouts)}"
+    assert SURFACE_PUBLIQUE_ADMISE - noms == set()
 
 
 def test_le_detecteur_de_fuite_reconnait_bien_une_porte_de_sortie() -> None:

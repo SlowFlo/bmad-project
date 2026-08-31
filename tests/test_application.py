@@ -2,7 +2,11 @@
 
 from __future__ import annotations
 
+import pytest
+from sqlalchemy import text
+
 from exaequo.adaptateurs.secondaires.persistance.base import (
+    SchemaObsolete,
     creer_fabrique_de_sessions,
     creer_moteur,
 )
@@ -34,6 +38,32 @@ def test_deux_demarrages_de_suite_laissent_quatre_vingt_six_profils(tmp_path) ->
     assert decomptes[0][1] == 11
     # Aucun jour disponible n'est dupliqué : le second passage n'ajoute rien.
     assert decomptes[0] == decomptes[1]
+
+
+def test_une_base_privee_de_son_index_refuse_de_demarrer(tmp_path) -> None:
+    """`create_all` n'atteint pas une table déjà là : la dérive doit être bruyante.
+
+    Le cas réel est celui d'un `exaequo.db` né avant 2.1 : il porte déjà `profil`,
+    donc `create_all` le laisse tel quel et `ix_profil_sport_id` n'y arrive jamais.
+    On le reproduit en privant une base saine de son index — c'est le seul test qui
+    emprunte ce chemin, toutes les fixtures fabriquant par ailleurs des bases neuves,
+    où le défaut est par construction invisible.
+    """
+    url = f"sqlite:///{tmp_path / 'vivier.db'}"
+    moteur = creer_moteur(url)
+    try:
+        preparer_le_vivier(moteur)
+        with moteur.begin() as connexion:
+            connexion.execute(text("DROP INDEX ix_profil_sport_id"))
+    finally:
+        moteur.dispose()
+
+    moteur = creer_moteur(url)
+    try:
+        with pytest.raises(SchemaObsolete, match="ix_profil_sport_id"):
+            preparer_le_vivier(moteur)
+    finally:
+        moteur.dispose()
 
 
 #: Ce que FastAPI installe de lui-même, sans qu'on lui demande rien. Toute autre

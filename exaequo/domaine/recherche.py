@@ -26,7 +26,7 @@ from exaequo.domaine.ports import PortVivier
 from exaequo.domaine.sports import cle_sport
 from exaequo.domaine.vivier import JourSemaine, Niveau, Profil
 
-__all__ = ["ResultatRecherche", "chercher_candidats_exacts"]
+__all__ = ["JourIndisponible", "ResultatRecherche", "chercher_candidats_exacts"]
 
 #: Un couple *(profil, jour)* qu'une rencontre immobilise. Le blocage porte sur ce
 #: jour seul : un profil bloqué mardi reste rendu le jeudi (CAP-14, AD-6).
@@ -77,10 +77,17 @@ def chercher_candidats_exacts(
     bloqué par une rencontre appartient à E5 (AD-6) et se branchera ici sans que
     cette signature soit réécrite.
 
-    Lève `TypeError` si `niveau` ou `jour` n'est pas un membre de son énumération.
+    Lève `TypeError` si `niveau` ou `jour` n'est pas un membre de son énumération, si
+    `libelle_sport` n'est pas une chaîne, si `demandeur_id` n'est ni absent ni un
+    `UUID`, ou si `jours_indisponibles` ne porte pas des couples
+    `(UUID, JourSemaine)`. Les cinq entrées sont gardées, et pour la même raison : ici
+    une entrée mal typée ne casse pas, elle **se tait**.
     """
     _exiger_membre(niveau, Niveau, "niveau")
     _exiger_membre(jour, JourSemaine, "jour")
+    _exiger_libelle_de_sport(libelle_sport)
+    _exiger_demandeur(demandeur_id)
+    _exiger_jours_indisponibles(jours_indisponibles)
 
     cle = cle_sport(libelle_sport)
     candidats = tuple(
@@ -119,6 +126,60 @@ def _exiger_membre(valeur: object, enumeration: type[Enum], parametre: str) -> N
             f"{type(valeur).__name__} ({valeur!r}). Passer le membre de "
             f"l'énumération, jamais son libellé."
         )
+
+
+def _exiger_libelle_de_sport(valeur: object) -> None:
+    """Refuse un libellé de sport qui n'est pas une chaîne.
+
+    Sans elle, `None` échoue au fond de `unicodedata.normalize`, avec un message qui
+    parle d'encodage plutôt que du paramètre fautif. Le module répond de ses entrées
+    lui-même, plutôt que de laisser fuiter l'erreur d'une dépendance de `sports.py`.
+    """
+    if not isinstance(valeur, str):
+        raise TypeError(
+            f"libelle_sport : str attendu, reçu {type(valeur).__name__} ({valeur!r})."
+        )
+
+
+def _exiger_demandeur(valeur: object) -> None:
+    """Refuse un demandeur qui n'est ni absent, ni un `UUID`.
+
+    Le cas dangereux est muet : `str(profil.id)` n'est jamais égal à `profil.id`, donc
+    l'exclusion « soi-même » de CAP-5 ne s'appliquerait pas et le demandeur **serait
+    rendu comme son propre partenaire**. Un défaut de ce genre ne lève rien, ne casse
+    aucun test d'appel, et ne se voit qu'en lisant le résultat.
+    """
+    if valeur is not None and not isinstance(valeur, UUID):
+        raise TypeError(
+            f"demandeur_id : UUID ou None attendu, reçu {type(valeur).__name__} "
+            f"({valeur!r})."
+        )
+
+
+def _exiger_jours_indisponibles(valeur: object) -> None:
+    """Refuse autre chose qu'un ensemble de couples `(UUID, JourSemaine)`.
+
+    E5 branchera ici la dérivation des jours qu'une rencontre immobilise (AD-6). Un
+    `JourSemaine` nu, ou un couple `(str, str)`, n'écarterait **rien** sans lever : le
+    blocage serait silencieusement inerte le jour même où il compte. La garde est
+    posée avant qu'un appelant existe, pour que ce jour-là l'erreur soit bruyante.
+    """
+    if not isinstance(valeur, Set):
+        raise TypeError(
+            f"jours_indisponibles : ensemble attendu, reçu {type(valeur).__name__} "
+            f"({valeur!r})."
+        )
+    for element in valeur:
+        if (
+            not isinstance(element, tuple)
+            or len(element) != 2
+            or not isinstance(element[0], UUID)
+            or not isinstance(element[1], JourSemaine)
+        ):
+            raise TypeError(
+                "jours_indisponibles : couples (UUID, JourSemaine) attendus, reçu "
+                f"{element!r}."
+            )
 
 
 def _est_candidat(

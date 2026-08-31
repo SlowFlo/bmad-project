@@ -4,7 +4,7 @@ type: 'feature'
 created: '2026-08-31'
 status: 'done'
 baseline_commit: '0802668b2e6c3a1650b7c037da0378befca837b1'
-review_loop_iteration: 0
+review_loop_iteration: 1
 context:
   - '{project-root}/documentation/implementation-artifacts/epic-2-context.md'
   - '{project-root}/documentation/specs/spec-ex-aequo/criteres-acceptation.md'
@@ -65,6 +65,7 @@ clé de sport, derrière un protocole déclaré dans `domaine/ports.py` comme la
 | Jour indisponible | `(profil.id, mardi)` dans `jours_indisponibles` | Écarté ce jour-là, rendu sur ses autres jours | N/A |
 | Sans jour déclaré | Profil sans aucune ligne `jour_disponible` | Jamais rendu | N/A |
 | Sport inconnu | « squash », absent du vivier | Résultat vide, aucune écriture | Aucune exception |
+| Entrée mal typée | `niveau="debutant"`, `jour="mardi"`, `demandeur_id` en chaîne, `jours_indisponibles` sans couples, `libelle_sport` non-chaîne | Jamais de résultat vide muet | `TypeError`, nommant le paramètre fautif |
 
 </frozen-after-approval>
 
@@ -125,6 +126,34 @@ clé de sport, derrière un protocole déclaré dans `domaine/ports.py` comme la
 - Étant donné n'importe quelle signature publique de `recherche.py`, quand on l'inspecte, alors aucun
   paramètre ne permet d'obtenir un candidat d'un niveau autre que celui demandé.
 
+
+### Review Findings
+
+*Revue adversariale du 2026-08-31 — quatre couches (Blind Hunter, Edge Case Hunter,
+Verification Gap, Acceptance Auditor) sur `0802668..a5ce103`. 25 constats retenus,
+6 écartés comme bruit. Aucun ne remet en cause les trois critères d'acceptation :
+ils portent tous sur la force des gardes, pas sur le comportement livré.*
+
+- [x] [Review][Decision] Aucun chemin de migration : `ix_profil_sport_id` n'atteint jamais un `exaequo.db` déjà créé — Reproduit par la couche Verification Gap : sur une base privée de l'index par `DROP INDEX`, rejouer `creer_schema` ne le repose pas et n'émet aucun message. La fixture `moteur` fabriquant une base neuve à chaque test, les 149 tests restent verts. Les deux tests qui rejouent bien un démarrage sur une base existante (`test_application.py:13`, `test_point_d_entree.py:57`) n'assertent que des décomptes de lignes, jamais le schéma. Le critère « étant donné une base créée par `creer_schema`, `ix_profil_sport_id` existe » est donc faux sur toute base antérieure, et 2.4 mesurerait SM-3 sans index sans le savoir. La seule protection est qu'une personne lise la réserve de `deferred-work.md` et supprime son fichier. **Tranché :** garde au démarrage. `creer_schema` vérifie désormais que tout index déclaré dans les modèles est bien posé et lève `SchemaObsolete` sinon ; éprouvé par `test_une_base_privee_de_son_index_refuse_de_demarrer`. `[exaequo/adaptateurs/secondaires/persistance/modeles.py:131]`
+- [x] [Review][Decision] La matrice d'E/S gelée ne porte aucune ligne pour le `TypeError` livré — Quatre tests couvrent désormais le refus d'une chaîne à la place d'un `Niveau` ou d'un `JourSemaine` (`test_recherche.py:446`), et la tâche d'exécution exige que les tests « couvrent chaque ligne de la matrice d'E/S ». Or la matrice est dans le bloc `<frozen-after-approval>` (lignes 14–69) : sa colonne « Traitement d'erreur » lit encore `N/A` partout et la liste `Never` ne mentionne que « Lever une exception sur un sport inconnu ». Le comportement est plus large que le contrat gelé. **Tranché :** matrice renégociée — une ligne « Entrée mal typée » y porte désormais le `TypeError`, et la garde a été étendue à `libelle_sport`, `demandeur_id` et `jours_indisponibles`. `[documentation/implementation-artifacts/spec-2-1-chercher-des-candidats-du-niveau-exact.md:55]`
+- [x] [Review][Patch] AC-3 est vérifié par une liste noire de sous-chaînes de noms, pas par la propriété structurelle qu'il énonce [tests/test_recherche.py:886]
+- [x] [Review][Patch] Les gardes d'entrée sont asymétriques : `demandeur_id`, `jours_indisponibles` et `libelle_sport` ne sont pas vérifiés [exaequo/domaine/recherche.py:51]
+- [x] [Review][Patch] L'audit AC-2 du chemin de recherche omet `domaine/sports.py`, le module qui définit `resoudre_libelle` [tests/test_recherche.py:843]
+- [x] [Review][Patch] `JourIndisponible` est absent de `__all__` alors qu'E5 devra le construire [exaequo/domaine/recherche.py:29]
+- [x] [Review][Patch] La docstring de `ports.py` affirme « `typing` seul » alors que le module importe `collections.abc.Sequence` [exaequo/domaine/ports.py:8]
+- [x] [Review][Patch] La référence « DW-1 » désigne la deuxième entrée de `deferred-work.md`, pas la première [exaequo/adaptateurs/secondaires/persistance/modeles.py:124]
+- [x] [Review][Patch] La section Verification annonce « les 94 tests existants » ; il y en a 98 (149 au total, 51 dans `test_recherche.py`) [documentation/implementation-artifacts/spec-2-1-chercher-des-candidats-du-niveau-exact.md:164]
+- [x] [Review][Patch] `vivier_amorce` jette le `ResultatAmorcage` : rien n'atteste que les 86 profils sont bien chargés [tests/conftest.py:55]
+- [x] [Review][Defer] `isinstance(depot, PortVivier)` ne prouve que la présence des méthodes, jamais leur signature [tests/test_recherche.py:626] — deferred, pre-existing
+- [x] [Review][Defer] Aucun vérificateur de types, aucun linter, aucune intégration continue [pyproject.toml:13] — deferred, pre-existing
+- [x] [Review][Defer] Le N+1 de `_vers_profil` n'est épinglé par aucun test de décompte de requêtes [exaequo/adaptateurs/secondaires/persistance/depots.py:234] — deferred, pre-existing
+- [x] [Review][Defer] Les entrées de `deferred-work.md` ne portent aucun `id:` et rien ne distingue une entrée close [documentation/implementation-artifacts/deferred-work.md:1] — deferred, pre-existing
+- [x] [Review][Defer] `profils_du_sport` accepte un libellé d'affichage non normalisé et rend une liste vide indiscernable d'un sport absent [exaequo/adaptateurs/secondaires/persistance/depots.py:161] — deferred, pre-existing
+- [x] [Review][Defer] Les exclusions « soi-même », « jour indisponible » et « sans jour déclaré » ne sont éprouvées que contre le faux port [tests/test_recherche.py:49] — deferred, pre-existing
+- [x] [Review][Defer] `sprint-status.yaml` : clés tronquées et diversement accentuées, `action_items` documenté mais absent, dates en MM-DD-YYYY non étiquetées [documentation/implementation-artifacts/sprint-status.yaml:34] — deferred, pre-existing
+- [x] [Review][Defer] `epic-2-context.md` ne cite aucun chemin source et ses nombres contractuels n'ont aucune provenance [documentation/implementation-artifacts/epic-2-context.md:1] — deferred, pre-existing
+- [x] [Review][Defer] `test_recherche.py` (967 lignes) mêle domaine, repères sur données d'amorçage, persistance et introspection [tests/test_recherche.py:1] — deferred, pre-existing
+
 ## Spec Change Log
 
 - **2026-08-31 — index composite plutôt que sur la seule clé de sport.** La revue adversariale a lu
@@ -161,8 +190,9 @@ l'humain : `create_all` ne pose l'index que sur une base neuve ; un `exaequo.db`
 ## Verification
 
 **Commands :**
-- `uv run pytest` — attendu : les 94 tests existants passent toujours, plus ceux de
-  `tests/test_recherche.py`.
+- `uv run pytest` — attendu : la suite est verte, aucun test préexistant ne régresse, et
+  `tests/test_recherche.py` s'y ajoute. Le décompte n'est pas fixé ici : un nombre écrit dans une
+  spec se périme à l'histoire suivante, et personne ne le relit.
 - `uv run python -m exaequo --amorcer-seulement` sur une base neuve, puis `PRAGMA index_list(profil)`
   — attendu : `ix_profil_sport_id` présent.
 
