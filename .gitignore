@@ -7,3 +7,15 @@ todomvc-3-items.png
 
 # Réglages personnels de Claude Code
 .claude/settings.local.json
+
+# Environnement Python et artefacts d'exécution
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Base SQLite locale — un fichier à côté du dépôt, jamais en dépôt
+*.db
+
+# Secrets : `.env.example` documente les clés, `.env` les porte
+.env
