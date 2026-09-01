@@ -1119,8 +1119,24 @@ def test_aucun_candidat_elargi_n_est_d_un_autre_niveau(vivier_amorce: Session) -
 
 
 def test_le_depot_satisfait_le_port_du_vivier(vivier_amorce: Session) -> None:
+    """Le dépôt honore le port, à l'exécution **et** à la vérification.
+
+    `isinstance` contre un `Protocol` `@runtime_checkable` ne regarde que le **nom**
+    des méthodes : ni l'arité, ni le type de retour. L'affectation annotée les compare,
+    elle, et le dit ici plutôt que de le devoir au hasard d'un site d'appel.
+
+    Mesuré par quatre sondes, pour ne pas lui prêter plus qu'elle ne tient : un
+    paramètre **supprimé** et un type de retour **changé** échouent tous deux ; un
+    paramètre **renommé** passe — mypy ne compare pas les noms ici, et le domaine
+    appelle de toute façon positionnellement ; un port qui se mettrait à **filtrer**
+    ne change aucune signature et n'est attrapé que par le test de comportement
+    `test_le_port_rend_un_niveau_inconnu_que_le_domaine_ecarte`.
+    """
     depot = DepotVivier(vivier_amorce)
-    assert isinstance(depot, PortVivier)
+
+    port: PortVivier = depot
+
+    assert isinstance(port, PortVivier)
 
 
 def test_le_depot_rend_tous_les_profils_du_sport_sans_filtrer(
